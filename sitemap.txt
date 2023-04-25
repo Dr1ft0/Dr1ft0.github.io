@@ -1,4 +1,4 @@
-http://example.com/2023/04/25/%E5%AD%A6%E4%B9%A0ing/
-http://example.com/2023/04/25/First%20/
-http://example.com/2023/04/23/hello-world/
+http://example.com/2023/04/25/html/%E5%AD%A6%E4%B9%A0ing/
+http://example.com/2023/04/25/html/First%20/
+http://example.com/2023/04/23/md/hello-world/
 http://example.com/
