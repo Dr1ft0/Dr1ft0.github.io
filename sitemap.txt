@@ -1,4 +1,3 @@
 http://example.com/2023/04/25/html/studying/
-http://example.com/2023/04/25/html/first%20/
 http://example.com/2023/04/23/md/hello-world/
 http://example.com/

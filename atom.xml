@@ -6,7 +6,7 @@
   <link href="http://example.com/atom.xml" rel="self"/>
   
   <link href="http://example.com/"/>
-  <updated>2023-04-25T14:10:23.899Z</updated>
+  <updated>2023-05-16T02:55:17.487Z</updated>
   <id>http://example.com/</id>
   
   <author>
@@ -21,9 +21,9 @@
     <link href="http://example.com/2023/04/25/html/studying/"/>
     <id>http://example.com/2023/04/25/html/studying/</id>
     <published>2023-04-25T13:55:04.188Z</published>
-    <updated>2023-04-25T14:10:23.899Z</updated>
+    <updated>2023-05-16T02:55:17.487Z</updated>
     
-    <content type="html"><![CDATA[<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="author" content="Drifter"><title>漂移师</title></head><body>    <h1 text-align="center" style="color: aqua"  size="0cqb"  >好漂亮的颜色</h1>     <!--注释-->    <hr><!--这是分割线-->    <a href="#tips">想玩小游戏吗？（点这里）</a>    <abbr title="翁煜恒">wg</abbr>很帅     <!--wg其实是翁煜恒-->    <p style="color: aqua;size: 0cqb;">这个<br>段落<br>演示了分行的效果</p>    <p style="color: aqua;size: 0cqb;">这个文本包含    <sub><b>加粗的下标</b></sub><sup><i>和斜体上标</i></sup></p>    <p><bdo dir="rtl">该段落文字从右到左显示。</bdo></p>   <!--right to left-->    <pre>wuhunihao      <del>ma</del>   <!--不用怕空格无了--> <!--删除线--><ins>haha</ins> <!--下划线-->    </pre>        <br>    <a href="https://www.bilibili.com/" target="_blank"><img decoding="async" src="https://patchwiki.biligame.com/images/blhx/1/1d/lbozlgfj61q17xqup9amxupybwmnzj9.png" width="512" height="288" /></a>     <!--超链接里面整一个图片就图片超链接了-->       <address>        Written by <a href="https://www.bilibili.com/" target="_blank">Drifter</a>.<br>         Visit us at:<br>        bilibili.com<br>        JNU GuangZhou China        </address>     <a id="tips" ></a>      <pre>             </pre>     <a href="https://amnesia-f.github.io/HTML/Demo/%E5%9C%88%E5%B0%8F%E7%8C%AB.html" target="_blank">小游戏</a></body></html>]]></content>
+    <content type="html"><![CDATA[<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="author" content="Drifter"><title>漂移师</title></head><body>    <h1 text-align="center" style="color: aqua"  size="0cqb"  >漂亮的颜色</h1>     <!--注释-->    <hr><!--这是分割线-->    <a href="#tips">想玩小游戏吗？（点这里）</a>    <abbr title="翁煜恒">wg</abbr>     <!--wg其实是翁煜恒-->    <p style="color: aqua;size: 0cqb;">这个<br>段落<br>演示了分行的效果</p>    <p style="color: aqua;size: 0cqb;">这个文本包含    <sub><b>加粗的下标</b></sub><sup><i>和斜体上标</i></sup></p>    <p><bdo dir="rtl">该段落文字从右到左显示。</bdo></p>   <!--right to left-->    <pre>wuhunihao      <del>ma</del>   <!--不用怕空格无了--> <!--删除线--><ins>haha</ins> <!--下划线-->    </pre>        <br>    <a href="https://www.bilibili.com/" target="_blank"><img decoding="async" src="https://patchwiki.biligame.com/images/blhx/1/1d/lbozlgfj61q17xqup9amxupybwmnzj9.png" width="512" height="288" /></a>     <!--超链接里面整一个图片就图片超链接了-->       <address>        Written by <a href="https://www.bilibili.com/" target="_blank">Drifter</a>.<br>         Visit us at:<br>        bilibili.com<br>        JNU GuangZhou China        </address>     <a id="tips" ></a>      <pre>             </pre>     <a href="https://amnesia-f.github.io/HTML/Demo/%E5%9C%88%E5%B0%8F%E7%8C%AB.html" target="_blank">小游戏</a></body></html>]]></content>
     
     
       
@@ -41,36 +41,6 @@
 
 &lt;body&gt;
     &lt;h1 te</summary>
-      
-    
-    
-    
-    
-  </entry>
-  
-  <entry>
-    <title>My Frist HTML</title>
-    <link href="http://example.com/2023/04/25/html/first%20/"/>
-    <id>http://example.com/2023/04/25/html/first%20/</id>
-    <published>2023-04-25T11:15:28.727Z</published>
-    <updated>2023-04-25T14:10:07.709Z</updated>
-    
-    <content type="html"><![CDATA[<!DOCTYPE html><html><head><meta charset="GBK"></head><body><h1>韩圣</h1><p>wow。</p><p>114514.</p><a href="https://smms.app/image/IqSw8PriOdtDKJe" target="_blank"><img src="https://s2.loli.net/2023/04/25/IqSw8PriOdtDKJe.jpg" alt="C8762EC5BB6D7D0CF59135DA639DB786.jpg"></a><h2>zhe</h2></body></html>]]></content>
-    
-    
-      
-      
-    <summary type="html">&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-&lt;head&gt;
-&lt;meta charset=&quot;GBK&quot;&gt;
-&lt;/head&gt;
-&lt;body&gt;
-
-&lt;h1&gt;韩圣&lt;/h1&gt;
-&lt;p&gt;wow。&lt;/p&gt;
-&lt;p&gt;114514.&lt;/p&gt;
-&lt;a href=&quot;https://smms.app/image/Iq</summary>
       
     
     
