@@ -1,0 +1,36 @@
+# Butterfly 主题个性化配置（覆盖主题默认值）
+
+# 导航菜单
+menu:
+  首页: /
+  归档: /archives/
+  分类: /categories/
+  标签: /tags/
+  知识库: /knowledge/
+  关于: /about/
+
+# 主题主色
+theme_color: '#49b1f5'
+
+# 头像（把图片放到 source/img/ 下再改这里）
+avatar:
+  img: /img/avatar.png
+
+# 访问统计（不蒜子，免费免注册）
+busuanzi:
+  site_uv: true
+  site_pv: true
+  page_pv: true
+
+# 本地搜索（依赖 hexo-generator-searchdb）
+local_search:
+  enable: true
+
+# Mermaid 图表（故障复盘画拓扑图/架构图用）
+mermaid:
+  enable: true
+  theme: default
+
+# 评论（默认关闭；想开 Giscus 时去 giscus.app 配置后填在这里）
+comments:
+  use: []

@@ -1,0 +1,115 @@
+# =========================================================
+# 站点信息
+# =========================================================
+title: Dr1ft0 的运维笔记
+subtitle: 海康威视 · IT 运维工程师（基础架构方向）的工作记录与知识库
+description: 运维周记、故障复盘、技术笔记与知识库索引
+keywords: 运维, Linux, 网络, DevOps, 故障复盘, Hexo, 海康威视
+author: Dr1ft0
+language: zh-CN
+timezone: Asia/Shanghai
+
+# =========================================================
+# URL
+# =========================================================
+url: https://dr1ft0.github.io/
+root: /
+permalink: :year/:month/:title/
+permalink_defaults:
+pretty_urls:
+  trailing_index: true
+  trailing_html: true
+
+# =========================================================
+# 目录
+# =========================================================
+source_dir: source
+public_dir: public
+tag_dir: tags
+archive_dir: archives
+category_dir: categories
+code_dir: downloads/code
+i18n_dir: :lang
+skip_render:
+
+# =========================================================
+# 写作
+# =========================================================
+new_post_name: :title.md
+default_layout: post
+titlecase: false
+external_link:
+  enable: true
+  field: site
+  exclude:
+filename_case: 0
+render_drafts: false
+post_asset_folder: false
+relative_link: false
+future: true
+highlight:
+  enable: true
+  line_number: true
+  auto_detect: false
+  tab_replace: ''
+  wrap: true
+  hljs: false
+prismjs:
+  enable: false
+  preprocess: true
+  line_number: true
+  tab_replace: ''
+
+# =========================================================
+# 首页
+# =========================================================
+index_generator:
+  path: ''
+  per_page: 10
+  order_by: -date
+
+# =========================================================
+# 分类 & 标签
+# =========================================================
+default_category: uncategorized
+category_map:
+tag_map:
+
+# =========================================================
+# 元数据 / 时间格式 / 分页
+# =========================================================
+meta_generator: true
+date_format: YYYY-MM-DD
+time_format: HH:mm:ss
+updated_option: mtime
+per_page: 10
+pagination_dir: page
+
+# =========================================================
+# 主题
+# =========================================================
+theme: butterfly
+
+# =========================================================
+# 部署（推荐使用 GitHub Actions 自动部署到 gh-pages 分支）
+# =========================================================
+deploy:
+  type: git
+  repo: https://github.com/dr1ft0/dr1ft0.github.io.git
+  branch: gh-pages
+
+# =========================================================
+# 插件配置：本地搜索 / RSS / Sitemap
+# =========================================================
+search:
+  path: search.xml
+  field: post
+  content: true
+
+feed:
+  type: atom
+  path: atom.xml
+  limit: 20
+
+sitemap:
+  path: sitemap.xml
