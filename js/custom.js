@@ -5,11 +5,142 @@
 (function () {
   'use strict';
 
+  // =========================================================
+  // 访问密码验证（输入 panyishuo 才能浏览）
+  // =========================================================
+  var ACCESS_PASSWORD = 'panyishuo'; // 访问密码
+  var STORAGE_KEY = 'dr1ft0_blog_access'; // localStorage 存储键
+  var STORAGE_EXPIRE = 7 * 24 * 60 * 60 * 1000; // 验证有效期 7 天
+
+  // 检查是否已通过验证
+  function isAuthorized() {
+    try {
+      var data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (data && data.authorized && data.expire > Date.now()) {
+        return true;
+      }
+    } catch (e) {
+      // 解析失败视为未授权
+    }
+    return false;
+  }
+
+  // 记录验证状态
+  function setAuthorized() {
+    try {
+      var data = {
+        authorized: true,
+        expire: Date.now() + STORAGE_EXPIRE
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      // localStorage 不可用时忽略
+    }
+  }
+
+  // 创建密码验证遮罩层
+  function createAccessOverlay() {
+    var overlay = document.createElement('div');
+    overlay.id = 'access-overlay';
+    overlay.innerHTML = [
+      '<div class="access-box">',
+      '  <div class="access-icon">🔒</div>',
+      '  <h2 class="access-title">访问验证</h2>',
+      '  <p class="access-desc">请输入访问密码以继续浏览</p>',
+      '  <input type="password" id="access-password" class="access-input" placeholder="请输入访问密码" autocomplete="off">',
+      '  <button type="button" id="access-submit" class="access-btn">进入博客</button>',
+      '  <p class="access-error" id="access-error" style="display:none;">密码错误，请重试</p>',
+      '</div>'
+    ].join('');
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  // 初始化访问控制
+  function initAccessControl() {
+    // 如果已通过验证，直接返回
+    if (isAuthorized()) {
+      return;
+    }
+
+    // 创建遮罩层
+    var overlay = createAccessOverlay();
+    var passwordInput = document.getElementById('access-password');
+    var submitBtn = document.getElementById('access-submit');
+    var errorMsg = document.getElementById('access-error');
+
+    // 验证密码
+    function verifyPassword() {
+      var input = passwordInput.value.trim();
+      if (input === ACCESS_PASSWORD) {
+        setAuthorized();
+        overlay.classList.add('access-success');
+        setTimeout(function () {
+          overlay.style.display = 'none';
+          document.body.style.overflow = '';
+        }, 500);
+      } else {
+        errorMsg.style.display = 'block';
+        passwordInput.value = '';
+        passwordInput.focus();
+        passwordInput.classList.add('access-input-error');
+        setTimeout(function () {
+          passwordInput.classList.remove('access-input-error');
+        }, 500);
+      }
+    }
+
+    // 绑定事件
+    submitBtn.addEventListener('click', verifyPassword);
+    passwordInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        verifyPassword();
+      }
+    });
+
+    // 锁定页面滚动
+    document.body.style.overflow = 'hidden';
+    passwordInput.focus();
+  }
+
+  // 立即执行访问控制（在页面渲染前）
+  initAccessControl();
+
+  // =========================================================
+  // 本地浏览量统计（作为不蒜子的补充，基于 localStorage）
+  // =========================================================
+  var VIEW_KEY_PREFIX = 'dr1ft0_blog_view_';
+
+  function initLocalViewCount() {
+    // 获取当前页面路径作为唯一标识
+    var pageKey = window.location.pathname;
+    var storageKey = VIEW_KEY_PREFIX + pageKey;
+
+    try {
+      // 读取当前页面的浏览量并 +1
+      var count = parseInt(localStorage.getItem(storageKey) || '0', 10);
+      count += 1;
+      localStorage.setItem(storageKey, String(count));
+
+      // 如果页面没有 busuanzi 浏览量元素，则显示本地统计
+      var busuanziPv = document.getElementById('busuanzi_value_page_pv');
+      if (!busuanziPv) {
+        var customPv = document.querySelectorAll('.post-meta-pv-cv');
+        customPv.forEach(function (el) {
+          el.textContent = count;
+        });
+      }
+    } catch (e) {
+      // localStorage 不可用时忽略
+    }
+  }
+
   // ---------- 页面加载完成后的初始化 ----------
   document.addEventListener('DOMContentLoaded', function () {
     initBackToTop();
     initArticleHover();
     initCopyButton();
+    initLocalViewCount();
   });
 
   // ---------- 返回顶部按钮增强 ----------
