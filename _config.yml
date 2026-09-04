@@ -4,7 +4,7 @@
 title: Dr1ft0 的博客
 subtitle: 海康威视 · IT 运维工程师（基础架构方向）的工作记录与知识库
 description: 运维周记、故障复盘、技术笔记与知识库索引
-keywords: 运维, Linux, 网络, DevOps, 故障复盘, Hexo, 海康威视
+keywords: 运维, Linux, 网络, DevOps, 故障复盘, Hexo, 海康威视, SRE, 容器, Docker, K8s
 author: Dr1ft0
 language: zh-CN
 timezone: Asia/Shanghai
@@ -31,6 +31,8 @@ category_dir: categories
 code_dir: downloads/code
 i18n_dir: :lang
 skip_render:
+  - 'css/**'
+  - 'js/**'
 
 # =========================================================
 # 写作
@@ -73,6 +75,10 @@ index_generator:
 # =========================================================
 default_category: uncategorized
 category_map:
+  运维周记: 运维周记
+  故障复盘: 故障复盘
+  技术笔记: 技术笔记
+  知识库: 知识库
 tag_map:
 
 # =========================================================
@@ -110,6 +116,32 @@ feed:
   type: atom
   path: atom.xml
   limit: 20
+  hub:
+  content: true
+  content_limit: 140
 
 sitemap:
   path: sitemap.xml
+
+# =========================================================
+# 文章字数统计
+# =========================================================
+word_count:
+  enable: true
+  post_wordcount: true
+  min2read: true
+  total_wordcount: true
+
+# =========================================================
+# 图片懒加载
+# =========================================================
+lazyload:
+  enable: true
+  onlypost: false
+  loadingImg: /img/loading.gif
+
+# =========================================================
+# 文章加密（可选）
+# =========================================================
+encrypt:
+  enable: false

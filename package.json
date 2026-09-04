@@ -7,7 +7,10 @@
     "build": "hexo generate",
     "clean": "hexo clean",
     "server": "hexo server",
-    "deploy": "hexo deploy"
+    "deploy": "hexo deploy",
+    "new:post": "hexo new post",
+    "new:zhouji": "hexo new 周记",
+    "new:fupan": "hexo new 复盘"
   },
   "hexo": {
     "version": "7.3.0"
@@ -26,6 +29,7 @@
     "hexo-renderer-marked": "^6.3.0",
     "hexo-renderer-pug": "^3.0.0",
     "hexo-renderer-stylus": "^3.0.0",
-    "hexo-server": "^3.0.0"
+    "hexo-server": "^3.0.0",
+    "hexo-wordcount": "^6.0.1"
   }
 }
