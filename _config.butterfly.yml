@@ -274,14 +274,14 @@ share:
     sites: wechat,weibo,qq
 
 # =========================================================
-# 评论（默认关闭，可配置 Giscus）
+# 评论（当前未启用，如需启用请配置 Giscus 等评论系统）
 # =========================================================
 comments:
   use: []
   text: true
   lazyload: false
-  count: false
-  card_post_count: false
+  count: true
+  card_post_count: true
 
 # =========================================================
 # 美化 / 特效
