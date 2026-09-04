@@ -27,5 +27,5 @@ descr: 一句话介绍
     - name: Dr1ft0
       link: https://dr1ft0.github.io/
       avatar: /img/avatar.png
-      descr: 海康威视 IT 运维工程师，记录运维路上的每一步
+      descr: IT 运维工程师，记录运维路上的每一步
 {% endflink %}

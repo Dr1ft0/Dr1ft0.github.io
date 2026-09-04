@@ -65,7 +65,7 @@ subtitle:
   effect: true
   typed_option:
     strings:
-      - 海康威视 · IT 运维工程师
+      - IT 运维工程师
       - 基础架构方向 · 网络
       - 记录故障 · 沉淀知识 · 持续成长
       - 网络自动化 → DevOps / SRE
@@ -160,7 +160,7 @@ aside:
     category: true
   card_author:
     enable: true
-    description: 海康威视 IT 运维工程师（基础架构方向）
+    description: IT 运维工程师（基础架构方向）
     button:
       enable: true
       icon: fab fa-github

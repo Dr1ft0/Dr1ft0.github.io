@@ -2,9 +2,9 @@
 # 站点信息
 # =========================================================
 title: Dr1ft0 的博客
-subtitle: 海康威视 · IT 运维工程师（基础架构方向）的工作记录与知识库
+subtitle: IT 运维工程师（基础架构方向）的工作记录与知识库
 description: 运维周记、故障复盘、技术笔记与知识库索引
-keywords: 运维, Linux, 网络, DevOps, 故障复盘, Hexo, 海康威视, SRE, 容器, Docker, K8s
+keywords: 运维, Linux, 网络, DevOps, 故障复盘, Hexo, SRE, 容器, Docker, K8s
 author: Dr1ft0
 language: zh-CN
 timezone: Asia/Shanghai
