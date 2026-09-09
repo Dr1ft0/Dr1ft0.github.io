@@ -1,0 +1,975 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践 | Dr1ft0 的博客</title><meta name="author" content="Dr1ft0"><meta name="copyright" content="Dr1ft0"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="对「脚本仙人」文件共享系统的完善优化：从需求分析、分层架构、核心功能到部署实战，重点记录端口占用、动态 IP、中文编码三个真实部署问题的解决方案">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践">
+<meta property="og:url" content="https://dr1ft0.github.io/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/index.html">
+<meta property="og:site_name" content="Dr1ft0 的博客">
+<meta property="og:description" content="对「脚本仙人」文件共享系统的完善优化：从需求分析、分层架构、核心功能到部署实战，重点记录端口占用、动态 IP、中文编码三个真实部署问题的解决方案">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://dr1ft0.github.io/img/avatar.png">
+<meta property="article:published_time" content="2026-09-09T04:00:00.000Z">
+<meta property="article:modified_time" content="2026-09-09T05:46:55.233Z">
+<meta property="article:author" content="Dr1ft0">
+<meta property="article:tag" content="文件共享">
+<meta property="article:tag" content="Node.js">
+<meta property="article:tag" content="全栈开发">
+<meta property="article:tag" content="系统设计">
+<meta property="article:tag" content="零依赖">
+<meta property="article:tag" content="SQLite">
+<meta property="article:tag" content="部署运维">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://dr1ft0.github.io/img/avatar.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践",
+  "url": "https://dr1ft0.github.io/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/",
+  "image": "https://dr1ft0.github.io/img/avatar.png",
+  "datePublished": "2026-09-09T04:00:00.000Z",
+  "dateModified": "2026-09-09T05:46:55.233Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Dr1ft0",
+      "url": "https://github.com/dr1ft0"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://dr1ft0.github.io/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.1.260810"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar@0.1.16/dist/snackbar.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        try {
+          const data = { value }
+
+          if (ttl != null) {
+            data.expiry = Date.now() + ttl * 86400000
+          }
+
+          localStorage.setItem(key, JSON.stringify(data))
+        } catch (e) {
+          console.error(e)
+        }
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const start = 6
+              const end = 18
+              const isNight =
+                start < end
+                    ? hour < start || hour >= end
+                    : hour >= start || hour < end
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":true,"pagination":{"enable":true,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":150,"languages":{"author":"作者: Dr1ft0","link":"链接: ","source":"来源: Dr1ft0 的博客","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"已切换为繁体中文","cht_to_chs":"已切换为简体中文","day_to_night":"已切换为深色模式","night_to_day":"已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#1f1f1f","position":"bottom-left"},
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Dr1ft0 的博客" type="application/atom+xml">
+</head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (true) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/knowledge/"><i class="fa-fw fas fa-book"></i><span> 知识库</span></a></div><div class="menus_item"><a class="site-page" href="/links/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Dr1ft0 的博客</span></a><a class="nav-page-title" href="/"><span class="site-name">从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/knowledge/"><i class="fa-fw fas fa-book"></i><span> 知识库</span></a></div><div class="menus_item"><a class="site-page" href="/links/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-09-09T04:00:00.000Z" title="发表于 2026-09-09 12:00:00">2026-09-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-09-09T05:46:55.233Z" title="更新于 2026-09-09 13:46:55">2026-09-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF%E7%AC%94%E8%AE%B0/">技术笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3012</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12 分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:180,&quot;messagePrev&quot;:&quot;本文发布于&quot;,&quot;messageNext&quot;:&quot;天前，内容可能已过时，请注意甄别。&quot;,&quot;postUpdate&quot;:&quot;2026-09-09 13:46:55&quot;}" hidden></div><blockquote>
+<p><strong>项目定位</strong>：小组内网协作的脚本共享系统，支持版本管理、权限控制、小组共享。<br><strong>技术栈</strong>：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。<br><strong>架构</strong>：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。<br><strong>本文定位</strong>：上一篇《「脚本仙人」系统开发总结》的完善优化篇，重点补充部署实战经验。</p>
+</blockquote>
+<hr>
+<h2 id="一、为什么做这个项目"><a href="#一、为什么做这个项目" class="headerlink" title="一、为什么做这个项目"></a>一、为什么做这个项目</h2><p>在小组日常开发中，经常需要共享部署脚本、工具脚本、配置文件。传统的做法是：</p>
+<ul>
+<li>发到群里 &#x2F; 网盘 —— 版本混乱，谁改了什么说不清</li>
+<li>用 Git 仓库 —— 对非开发同学不友好，且脚本经常要”临时改一版”</li>
+<li>用现成的文件共享工具 —— 没有版本管理，没有权限控制</li>
+</ul>
+<p>于是我们决定自己写一个<strong>面向小组内网协作的脚本共享系统</strong>，核心诉求：</p>
+<ol>
+<li><strong>共享脚本</strong>：小组内网成员都能上传、下载、预览脚本</li>
+<li><strong>版本管理</strong>：脚本可以多版本迭代，支持历史查看、回滚、更新说明</li>
+<li><strong>权限控制</strong>：只有 owner 能改&#x2F;删&#x2F;共享，可读用户只能看</li>
+<li><strong>零依赖</strong>：纯 Node.js 原生实现，<code>node server.js</code> 就能跑，不依赖任何构建工具</li>
+</ol>
+<blockquote>
+<p>为什么零依赖？因为公司安全软件会拦截 esbuild &#x2F; vite 等构建工具，纯原生实现可以完全避开这些麻烦。</p>
+</blockquote>
+<hr>
+<h2 id="二、技术选型"><a href="#二、技术选型" class="headerlink" title="二、技术选型"></a>二、技术选型</h2><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>选择</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>运行时</td>
+<td>Node.js 24+</td>
+<td>原生支持 <code>node:sqlite</code>，无需额外安装数据库</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>SQLite（node:sqlite）</td>
+<td>单文件、零配置、适合小组规模</td>
+</tr>
+<tr>
+<td>密码哈希</td>
+<td>scrypt（node:crypto）</td>
+<td>Node 内置，安全可靠</td>
+</tr>
+<tr>
+<td>HTTP 服务</td>
+<td>node:http</td>
+<td>原生，不依赖 express</td>
+</tr>
+<tr>
+<td>前端</td>
+<td>原生 HTML&#x2F;JS</td>
+<td>无构建，直接静态托管</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>start.bat &#x2F; stop.bat</td>
+<td>Windows 内网后台常驻</td>
+</tr>
+</tbody></table>
+<p><strong>核心决策：零 npm 依赖。</strong> 整个项目只用 Node.js 内置模块（<code>node:http</code>、<code>node:crypto</code>、<code>node:sqlite</code>、<code>node:fs</code> 等），这是本项目最大的特色，也是工程化落地的重要考量。</p>
+<hr>
+<h2 id="三、架构设计"><a href="#三、架构设计" class="headerlink" title="三、架构设计"></a>三、架构设计</h2><h3 id="3-1-严格分层"><a href="#3-1-严格分层" class="headerlink" title="3.1 严格分层"></a>3.1 严格分层</h3><p>项目采用经典的分层架构：<strong>Router(路由) → Controller(控制器) → Service(业务) → Repo(数据)</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">请求进入</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">server.js                 ★ 入口层：启动、装配、优雅退出、初始化、数据迁移</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">app.js                    ★ 装配层：注册路由表 + 中间件 + 全局错误边界</span><br><span class="line">   │</span><br><span class="line">  ├── middleware/auth.js   ★ 中间件：Bearer token 鉴权</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">modules/&lt;name&gt;/</span><br><span class="line">   ├── *.routes.js        ★ 路由层：声明接口地图</span><br><span class="line">   ├── *.controller.js    ★ 控制器层：解析 HTTP 请求/响应</span><br><span class="line">   ├── *.service.js       ★ 服务层：业务规则校验，编排数据</span><br><span class="line">   └── *.repo.js          ★ 数据层：封装存储（SQLite + 磁盘文件）</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">utils/                    ★ 工具层：http / logger / password / sqlite / audit</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-各层职责"><a href="#3-2-各层职责" class="headerlink" title="3.2 各层职责"></a>3.2 各层职责</h3><table>
+<thead>
+<tr>
+<th>层</th>
+<th>文件</th>
+<th>职责</th>
+<th>类比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>入口层</td>
+<td><code>server.js</code></td>
+<td>启动、监听、优雅退出、初始化、数据迁移</td>
+<td>大门</td>
+</tr>
+<tr>
+<td>装配层</td>
+<td><code>app.js</code></td>
+<td>组装所有模块、注册路由、全局错误边界</td>
+<td>前台调度</td>
+</tr>
+<tr>
+<td>中间件</td>
+<td><code>middleware/auth.js</code></td>
+<td>请求身份校验</td>
+<td>门卫</td>
+</tr>
+<tr>
+<td>路由层</td>
+<td><code>*.routes.js</code></td>
+<td>接口地图（who→what）</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>控制器层</td>
+<td><code>*.controller.js</code></td>
+<td>解析 req&#x2F;res，转 HTTP 语义</td>
+<td>服务员</td>
+</tr>
+<tr>
+<td>服务层</td>
+<td><code>*.service.js</code></td>
+<td>业务规则、编排</td>
+<td>厨师</td>
+</tr>
+<tr>
+<td>数据层</td>
+<td><code>*.repo.js</code></td>
+<td>读写存储</td>
+<td>仓库</td>
+</tr>
+<tr>
+<td>工具层</td>
+<td><code>utils/*.js</code></td>
+<td>公共设施</td>
+<td>公共设施</td>
+</tr>
+</tbody></table>
+<h3 id="3-3-依赖方向"><a href="#3-3-依赖方向" class="headerlink" title="3.3 依赖方向"></a>3.3 依赖方向</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Controller → Service → Repo（依赖向下）</span><br><span class="line">上层只依赖下层的接口，下层不认识上层。</span><br><span class="line">→ 换存储(Repo)或换框架(Controller)不影响其他层。</span><br></pre></td></tr></table></figure>
+
+<p>这种设计带来的好处：</p>
+<ul>
+<li><strong>单一职责</strong>：每个文件只做一件事</li>
+<li><strong>开闭原则</strong>：加新模块只需在 app.js 注册，不改核心</li>
+<li><strong>可测试性</strong>：各层可以独立 mock 测试</li>
+<li><strong>可维护性</strong>：业务逻辑集中在 Service，数据访问集中在 Repo</li>
+</ul>
+<hr>
+<h2 id="四、核心功能"><a href="#四、核心功能" class="headerlink" title="四、核心功能"></a>四、核心功能</h2><h3 id="4-1-认证与用户"><a href="#4-1-认证与用户" class="headerlink" title="4.1 认证与用户"></a>4.1 认证与用户</h3><ul>
+<li>登录签发带过期时间的 token，连续失败锁定账号</li>
+<li>注册新用户，密码 scrypt 哈希存储</li>
+<li>管理员可禁用&#x2F;启用用户、改角色、重置密码</li>
+</ul>
+<h3 id="4-2-文件-脚本管理"><a href="#4-2-文件-脚本管理" class="headerlink" title="4.2 文件 &#x2F; 脚本管理"></a>4.2 文件 &#x2F; 脚本管理</h3><ul>
+<li>上传：支持文本&#x2F;脚本（JSON）和任意文件（multipart&#x2F;form-data）</li>
+<li>下载：流式下载，正确文件名和 MIME</li>
+<li>在线预览：文本类文件直接预览</li>
+<li>搜索：按文件名 &#x2F; 简介 &#x2F; 标签 模糊搜索</li>
+<li>标签：上传&#x2F;编辑时打标签，彩色标签云，点击一键筛选</li>
+<li>筛选：按上传者 &#x2F; 文件类型 &#x2F; 标签 组合筛选，按名称&#x2F;时间&#x2F;大小排序</li>
+</ul>
+<h3 id="4-3-脚本版本管理（核心）"><a href="#4-3-脚本版本管理（核心）" class="headerlink" title="4.3 脚本版本管理（核心）"></a>4.3 脚本版本管理（核心）</h3><ul>
+<li>新增版本：为脚本添加新版本，可填更新说明</li>
+<li>版本历史：查看所有版本（版本号&#x2F;大小&#x2F;更新人&#x2F;时间&#x2F;说明）</li>
+<li>查看版本：查看任意历史版本内容</li>
+<li>回滚：一键回滚到指定版本（切换当前版本指针，保留全部历史）</li>
+</ul>
+<h3 id="4-4-小组共享"><a href="#4-4-小组共享" class="headerlink" title="4.4 小组共享"></a>4.4 小组共享</h3><ul>
+<li>共享给成员：指定用户名列表，共享给特定成员</li>
+<li>小组公共：设为公共文件，所有人可见</li>
+<li>权限控制：只有 owner 能改&#x2F;删&#x2F;共享；可读用户能下载&#x2F;预览&#x2F;看版本</li>
+</ul>
+<h3 id="4-5-运维"><a href="#4-5-运维" class="headerlink" title="4.5 运维"></a>4.5 运维</h3><ul>
+<li>健康检查：<code>GET /api/health</code> 返回状态、磁盘、文件数、用户数</li>
+<li>审计日志：上传&#x2F;下载&#x2F;删除&#x2F;版本&#x2F;共享等操作记录到 SQLite + audit.log</li>
+<li>运行日志：按天滚动落盘到 data&#x2F;logs&#x2F;</li>
+<li>备份：backup.bat 一键备份 data&#x2F; 目录</li>
+</ul>
+<hr>
+<h2 id="五、遇到的问题与解决方案"><a href="#五、遇到的问题与解决方案" class="headerlink" title="五、遇到的问题与解决方案"></a>五、遇到的问题与解决方案</h2><p>开发过程中踩了不少坑，这里重点记录两个<strong>部署阶段</strong>遇到的实际问题。</p>
+<h3 id="5-1-问题一：端口号被占用"><a href="#5-1-问题一：端口号被占用" class="headerlink" title="5.1 问题一：端口号被占用"></a>5.1 问题一：端口号被占用</h3><p><strong>现象：</strong></p>
+<p>在小组内网部署时，双击 <code>start.bat</code> 启动服务，但服务一直启动失败。查看日志发现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Error: listen EADDRINUSE: address already in use :::3000</span><br></pre></td></tr></table></figure>
+
+<p><strong>原因分析：</strong></p>
+<p>3000 端口已经被其他进程占用了。排查后发现，之前手动启动过服务（<code>node server.js</code>），进程没有正常退出，一直占着 3000 端口。再次启动时，新进程无法绑定端口，直接报 <code>EADDRINUSE</code> 错误。</p>
+<p>更隐蔽的情况是：<strong>某个 node 进程占用了 3000 端口，但没有 PID 文件记录</strong>，导致 <code>stop.bat</code> 无法通过 PID 文件找到并停止它。</p>
+<p><strong>解决方案：</strong></p>
+<ol>
+<li><strong>用 PID 文件精确定位进程</strong>：服务启动时把 <code>process.pid</code> 写入 <code>data/server.pid</code>，停止时读取 PID 文件精确结束对应进程，而不是粗暴地 <code>taskkill /F /IM node.exe</code>（那会误杀所有 node 进程）。</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// server.js 启动成功后写入 PID</span></span><br><span class="line">server.<span class="title function_">listen</span>(config.<span class="property">port</span>, config.<span class="property">host</span>, <span class="function">() =&gt;</span> &#123;</span><br><span class="line">  <span class="title function_">writeFileSync</span>(<span class="variable constant_">PID_FILE</span>, <span class="title class_">String</span>(process.<span class="property">pid</span>), <span class="string">&#x27;utf8&#x27;</span>)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li><p><strong>start.bat 启动前检查端口</strong>：通过 <code>netstat -ano | findstr :3000</code> 检查端口是否被占用，若被占用则提示先停止旧进程。</p>
+</li>
+<li><p><strong>stop.bat 只杀 FileHub 进程</strong>：读取 PID 文件，用 <code>taskkill /F /PID %PID%</code> 只结束 FileHub 进程，不影响其他 node 程序。</p>
+</li>
+</ol>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">REM stop.bat 核心逻辑</span></span><br><span class="line"><span class="built_in">set</span> /p PID=&lt;&quot;<span class="variable">%PID_FILE%</span>&quot;</span><br><span class="line"><span class="built_in">taskkill</span> /F /PID <span class="variable">%PID%</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>经验总结</strong>：后台服务一定要用 PID 文件管理进程生命周期，避免”僵尸进程”占用端口。同时，停止脚本要精确定位目标进程，不要用 <code>taskkill /IM</code> 误杀所有同名进程。</p>
+</blockquote>
+<h3 id="5-2-问题二：内网-IP-地址会变"><a href="#5-2-问题二：内网-IP-地址会变" class="headerlink" title="5.2 问题二：内网 IP 地址会变"></a>5.2 问题二：内网 IP 地址会变</h3><p><strong>现象：</strong></p>
+<p>服务启动后，<code>start.bat</code> 显示访问地址 <code>http://&lt;本机内网IP&gt;:3000/</code>，但同事反馈”昨天还能访问，今天打不开了”。</p>
+<p><strong>原因分析：</strong></p>
+<p>小组内网使用 <strong>DHCP 动态分配 IP</strong>，服务器的内网 IP 地址<strong>每天可能变化</strong>。昨天是 <code>10.26.55.129</code>，今天可能就变成 <code>10.26.55.130</code> 了。如果 <code>start.bat</code> 里硬编码了 IP，IP 一变就失效。</p>
+<p><strong>解决方案：</strong></p>
+<p>写一个 PowerShell 脚本 <a href="get-lan-ip.ps1"><code>get-lan-ip.ps1</code></a>，<strong>每次启动时实时检测当前内网 IP</strong>，而不是硬编码：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># get-lan-ip.ps1 — 获取当前活动网卡的内网 IPv4 地址</span></span><br><span class="line"><span class="variable">$ip</span> = (<span class="built_in">Get-NetIPConfiguration</span> |</span><br><span class="line">    <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.IPv4DefaultGateway <span class="operator">-ne</span> <span class="variable">$null</span> <span class="operator">-and</span> <span class="variable">$_</span>.NetAdapter.Status <span class="operator">-eq</span> <span class="string">&#x27;Up&#x27;</span> &#125; |</span><br><span class="line">    <span class="built_in">Select-Object</span> <span class="literal">-First</span> <span class="number">1</span>).IPv4Address.IPAddress</span><br><span class="line"></span><br><span class="line"><span class="comment"># 若未找到，回退到任意非回环 IPv4 地址</span></span><br><span class="line"><span class="keyword">if</span> (<span class="operator">-not</span> <span class="variable">$ip</span>) &#123;</span><br><span class="line">    <span class="variable">$ip</span> = (<span class="built_in">Get-NetIPAddress</span> <span class="literal">-AddressFamily</span> IPv4 |</span><br><span class="line">        <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.IPAddress <span class="operator">-notlike</span> <span class="string">&#x27;127.*&#x27;</span> <span class="operator">-and</span> <span class="variable">$_</span>.IPAddress <span class="operator">-notlike</span> <span class="string">&#x27;169.254.*&#x27;</span> &#125; |</span><br><span class="line">        <span class="built_in">Select-Object</span> <span class="literal">-First</span> <span class="number">1</span>).IPAddress</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 最终回退到本机回环</span></span><br><span class="line"><span class="keyword">if</span> (<span class="operator">-not</span> <span class="variable">$ip</span>) &#123; <span class="variable">$ip</span> = <span class="string">&#x27;127.0.0.1&#x27;</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">Write-Output</span> <span class="variable">$ip</span></span><br></pre></td></tr></table></figure>
+
+<p>然后在 <code>start.bat</code> 中调用它，把检测到的 IP 显示给用户：</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">REM start.bat 自动检测当前内网 IP</span></span><br><span class="line"><span class="keyword">for</span> /f &quot;delims=&quot; <span class="variable">%%i</span> <span class="keyword">in</span> (&#x27;powershell -NoProfile -ExecutionPolicy Bypass -File &quot;%~dp0get-lan-ip.ps1&quot;&#x27;) <span class="keyword">do</span> <span class="built_in">set</span> LAN_IP=<span class="variable">%%i</span></span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> <span class="keyword">defined</span> LAN_IP <span class="built_in">set</span> LAN_IP=<span class="number">127</span>.<span class="number">0</span>.<span class="number">0</span>.<span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span>   访问地址: http://<span class="variable">%LAN_IP%</span>:<span class="number">3000</span>/</span><br></pre></td></tr></table></figure>
+
+<p>这样无论 IP 怎么变，<code>start.bat</code> 都会显示当前正确的内网访问地址。</p>
+<blockquote>
+<p><strong>经验总结</strong>：内网部署时，IP 是动态的，不要硬编码。用脚本实时检测，或者用主机名（如 <code>http://server-name:3000/</code>）代替 IP。</p>
+</blockquote>
+<h3 id="5-3-问题三：批处理文件中文乱码"><a href="#5-3-问题三：批处理文件中文乱码" class="headerlink" title="5.3 问题三：批处理文件中文乱码"></a>5.3 问题三：批处理文件中文乱码</h3><p><strong>现象：</strong></p>
+<p><code>start.bat</code> 和 <code>stop.bat</code> 里写了中文提示，但运行时中文变成乱码，甚至报”不是内部或外部命令”。</p>
+<p><strong>原因分析：</strong></p>
+<p>Windows cmd 默认使用 <strong>GBK 代码页（936）</strong>，而文件保存为 <strong>UTF-8 编码</strong>。UTF-8 的中文字节在 GBK 下被错误解码，导致中文被当作命令执行。</p>
+<p><strong>解决方案：</strong></p>
+<p>将 <code>.bat</code> 文件保存为 <strong>GBK 编码</strong>（Windows 中文系统标准），与 cmd 默认代码页匹配，中文正常显示。</p>
+<blockquote>
+<p><strong>经验总结</strong>：Windows 批处理文件的中文编码要与 cmd 代码页一致。中文 Windows 系统用 GBK，否则中文会乱码。</p>
+</blockquote>
+<hr>
+<h2 id="六、部署与使用"><a href="#六、部署与使用" class="headerlink" title="六、部署与使用"></a>六、部署与使用</h2><h3 id="6-1-内网小组部署"><a href="#6-1-内网小组部署" class="headerlink" title="6.1 内网小组部署"></a>6.1 内网小组部署</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 启动（后台运行，监听 0.0.0.0，小组内网可访问）</span></span><br><span class="line">start.bat</span><br><span class="line"></span><br><span class="line"><span class="comment"># 停止</span></span><br><span class="line">stop.bat</span><br><span class="line"></span><br><span class="line"><span class="comment"># 备份 data/ 目录（数据库 + 文件 + 日志）</span></span><br><span class="line">backup.bat</span><br></pre></td></tr></table></figure>
+
+<p>启动后，<code>start.bat</code> 会自动检测当前内网 IP 并显示访问地址：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">FileHub 服务已后台启动！</span><br><span class="line">  进程 PID: 19428</span><br><span class="line">  访问地址: http://10.26.55.129:3000/</span><br><span class="line">  查看日志: data\server.log（及 data\logs\ 按天日志）</span><br><span class="line">  停止服务: 运行 stop.bat</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-演示账号"><a href="#6-2-演示账号" class="headerlink" title="6.2 演示账号"></a>6.2 演示账号</h3><ul>
+<li><strong>admin &#x2F; 123456</strong>（首次启动自动创建）</li>
+</ul>
+<hr>
+<h2 id="七、用到的架构思想（面试-学习点）"><a href="#七、用到的架构思想（面试-学习点）" class="headerlink" title="七、用到的架构思想（面试&#x2F;学习点）"></a>七、用到的架构思想（面试&#x2F;学习点）</h2><table>
+<thead>
+<tr>
+<th>思想</th>
+<th>体现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>分层架构</strong></td>
+<td>Controller&#x2F;Service&#x2F;Repo 职责分离</td>
+</tr>
+<tr>
+<td><strong>控制反转(IoC)</strong></td>
+<td>server 只调 app.handle，不碰业务</td>
+</tr>
+<tr>
+<td><strong>单一职责(SRP)</strong></td>
+<td>每个文件只做一件事</td>
+</tr>
+<tr>
+<td><strong>依赖倒置</strong></td>
+<td>上层依赖下层接口，不依赖实现</td>
+</tr>
+<tr>
+<td><strong>开闭原则</strong></td>
+<td>加新模块只需在 app.js 注册，不改核心</td>
+</tr>
+<tr>
+<td><strong>防御性编程</strong></td>
+<td>路径穿越校验、body 大小限制、token 防篡改</td>
+</tr>
+<tr>
+<td><strong>元数据与文件分离</strong></td>
+<td>元数据在 SQLite，本体在 uploads 目录</td>
+</tr>
+<tr>
+<td><strong>全局错误边界</strong></td>
+<td>所有异常统一转 500，不崩溃进程</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><p>这个项目虽然规模不大，但完整地实践了：</p>
+<ol>
+<li><strong>工程化落地</strong>：从需求分析、分层架构、到部署运维，全流程覆盖</li>
+<li><strong>零依赖哲学</strong>：只用 Node 原生模块，避开构建工具和外部依赖的坑</li>
+<li><strong>防御性编程</strong>：路径穿越、body 限制、token 防篡改等安全措施</li>
+<li><strong>部署实战</strong>：解决了端口占用、动态 IP、中文编码等真实部署问题</li>
+</ol>
+<p>最有价值的不是代码本身，而是<strong>踩坑后沉淀的经验</strong>：</p>
+<ul>
+<li>后台服务要用 PID 文件管理进程，避免僵尸进程占端口</li>
+<li>内网 IP 是动态的，不要硬编码，要实时检测</li>
+<li>Windows 批处理文件的中文编码要与 cmd 代码页一致</li>
+</ul>
+<p>希望这篇博客对你有帮助。如果你也在做小组协作工具，欢迎交流！</p>
+<hr>
+<h2 id="📦-项目地址"><a href="#📦-项目地址" class="headerlink" title="📦 项目地址"></a>📦 项目地址</h2><ul>
+<li><strong>GitHub</strong>：<a target="_blank" rel="noopener" href="https://github.com/Dr1ft0/Filehub-4-Group">Filehub-4-Group</a></li>
+</ul>
+<blockquote>
+<p>欢迎 Star、Fork，也欢迎提 Issue 交流讨论。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a target="_blank" rel="noopener" href="https://github.com/dr1ft0">Dr1ft0</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://dr1ft0.github.io/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/">https://dr1ft0.github.io/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://dr1ft0.github.io" target="_blank">Dr1ft0 的博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB/">文件共享</a><a class="post-meta__tags" href="/tags/Node-js/">Node.js</a><a class="post-meta__tags" href="/tags/%E5%85%A8%E6%A0%88%E5%BC%80%E5%8F%91/">全栈开发</a><a class="post-meta__tags" href="/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">系统设计</a><a class="post-meta__tags" href="/tags/%E9%9B%B6%E4%BE%9D%E8%B5%96/">零依赖</a><a class="post-meta__tags" href="/tags/SQLite/">SQLite</a><a class="post-meta__tags" href="/tags/%E9%83%A8%E7%BD%B2%E8%BF%90%E7%BB%B4/">部署运维</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.png" data-sites="wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/" title="「脚本仙人」系统开发总结"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">「脚本仙人」系统开发总结</div></div><div class="info-2"><div class="info-item-1">从零到一开发「脚本仙人」文件/脚本共享系统的完整总结：分层架构、零依赖取舍、数据库迁移、安全防护，以及六个踩坑教训与总体心得</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/" title="「脚本仙人」系统开发总结"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-08</div><div class="info-item-2">「脚本仙人」系统开发总结</div></div><div class="info-2"><div class="info-item-1">从零到一开发「脚本仙人」文件/脚本共享系统的完整总结：分层架构、零依赖取舍、数据库迁移、安全防护，以及六个踩坑教训与总体心得</div></div></div></a><a class="pagination-related" href="/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E6%80%9D%E8%B7%AF%E4%B8%8E%E6%AD%A5%E9%AA%A4/" title="文件共享系统故障排查思路与步骤"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-07</div><div class="info-item-2">文件共享系统故障排查思路与步骤</div></div><div class="info-2"><div class="info-item-1">文件共享系统（Samba/NFS/Windows共享/OSS）出问题时，如何从外到内、从现象到根因地系统化排查。附完整命令、决策树与自动化思路。</div></div></div></a><a class="pagination-related" href="/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BF%90%E7%BB%B4%E6%96%B9%E6%A1%88/" title="文件共享系统自动化运维方案"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-04</div><div class="info-item-2">文件共享系统自动化运维方案</div></div><div class="info-2"><div class="info-item-1">文件共享系统的自动化运维方案：备份、监控、同步、清理、权限管理五大模块的通用脚本逻辑与实施路线图</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Dr1ft0</div><div class="author-info-description">IT 运维工程师（基础架构方向）</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/dr1ft0"><i class="fab fa-github"></i><span>关注我</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/dr1ft0" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:dr1ft0@example.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss" style="color: #ffa500;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">🚀 欢迎来到我的博客！这里记录运维工作中的故障复盘、技术笔记与成长历程。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E5%81%9A%E8%BF%99%E4%B8%AA%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.</span> <span class="toc-text">一、为什么做这个项目</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%8A%80%E6%9C%AF%E9%80%89%E5%9E%8B"><span class="toc-number">2.</span> <span class="toc-text">二、技术选型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1"><span class="toc-number">3.</span> <span class="toc-text">三、架构设计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E4%B8%A5%E6%A0%BC%E5%88%86%E5%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 严格分层</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E5%90%84%E5%B1%82%E8%81%8C%E8%B4%A3"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 各层职责</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E4%BE%9D%E8%B5%96%E6%96%B9%E5%90%91"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 依赖方向</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%A0%B8%E5%BF%83%E5%8A%9F%E8%83%BD"><span class="toc-number">4.</span> <span class="toc-text">四、核心功能</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E8%AE%A4%E8%AF%81%E4%B8%8E%E7%94%A8%E6%88%B7"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 认证与用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E6%96%87%E4%BB%B6-%E8%84%9A%E6%9C%AC%E7%AE%A1%E7%90%86"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 文件 &#x2F; 脚本管理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E8%84%9A%E6%9C%AC%E7%89%88%E6%9C%AC%E7%AE%A1%E7%90%86%EF%BC%88%E6%A0%B8%E5%BF%83%EF%BC%89"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 脚本版本管理（核心）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E5%B0%8F%E7%BB%84%E5%85%B1%E4%BA%AB"><span class="toc-number">4.4.</span> <span class="toc-text">4.4 小组共享</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-5-%E8%BF%90%E7%BB%B4"><span class="toc-number">4.5.</span> <span class="toc-text">4.5 运维</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="toc-number">5.</span> <span class="toc-text">五、遇到的问题与解决方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E9%97%AE%E9%A2%98%E4%B8%80%EF%BC%9A%E7%AB%AF%E5%8F%A3%E5%8F%B7%E8%A2%AB%E5%8D%A0%E7%94%A8"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 问题一：端口号被占用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E9%97%AE%E9%A2%98%E4%BA%8C%EF%BC%9A%E5%86%85%E7%BD%91-IP-%E5%9C%B0%E5%9D%80%E4%BC%9A%E5%8F%98"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 问题二：内网 IP 地址会变</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E9%97%AE%E9%A2%98%E4%B8%89%EF%BC%9A%E6%89%B9%E5%A4%84%E7%90%86%E6%96%87%E4%BB%B6%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 问题三：批处理文件中文乱码</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E9%83%A8%E7%BD%B2%E4%B8%8E%E4%BD%BF%E7%94%A8"><span class="toc-number">6.</span> <span class="toc-text">六、部署与使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E5%86%85%E7%BD%91%E5%B0%8F%E7%BB%84%E9%83%A8%E7%BD%B2"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 内网小组部署</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E6%BC%94%E7%A4%BA%E8%B4%A6%E5%8F%B7"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 演示账号</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E7%94%A8%E5%88%B0%E7%9A%84%E6%9E%B6%E6%9E%84%E6%80%9D%E6%83%B3%EF%BC%88%E9%9D%A2%E8%AF%95-%E5%AD%A6%E4%B9%A0%E7%82%B9%EF%BC%89"><span class="toc-number">7.</span> <span class="toc-text">七、用到的架构思想（面试&#x2F;学习点）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">8.</span> <span class="toc-text">八、总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%93%A6-%E9%A1%B9%E7%9B%AE%E5%9C%B0%E5%9D%80"><span class="toc-number">9.</span> <span class="toc-text">📦 项目地址</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/" title="从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践">从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践</a><time datetime="2026-09-09T04:00:00.000Z" title="发表于 2026-09-09 12:00:00">2026-09-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/" title="「脚本仙人」系统开发总结">「脚本仙人」系统开发总结</a><time datetime="2026-09-08T04:00:00.000Z" title="发表于 2026-09-08 12:00:00">2026-09-08</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E6%80%9D%E8%B7%AF%E4%B8%8E%E6%AD%A5%E9%AA%A4/" title="文件共享系统故障排查思路与步骤">文件共享系统故障排查思路与步骤</a><time datetime="2026-09-07T02:00:00.000Z" title="发表于 2026-09-07 10:00:00">2026-09-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BF%90%E7%BB%B4%E6%96%B9%E6%A1%88/" title="文件共享系统自动化运维方案">文件共享系统自动化运维方案</a><time datetime="2026-09-04T08:00:00.000Z" title="发表于 2026-09-04 16:00:00">2026-09-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/2026-W36/" title="周记 - 2026-W36">周记 - 2026-W36</a><time datetime="2026-09-04T06:26:57.000Z" title="发表于 2026-09-04 14:26:57">2026-09-04</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2023 - 2026 By Dr1ft0</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.1.260810</a></span></div><div class="footer_custom_text">记录运维路上的每一步</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.1.260810"></script><script src="/js/main.js?v=5.7.1.260810"></script><script src="/js/tw_cn.js?v=5.7.1.260810"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@19.1.3/dist/lazyload.iife.min.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar@0.1.16/dist/snackbar.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.innerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    // Clean up previous event listeners and pending frames
+    if (wrap.__mermaidAbortController) {
+      wrap.__mermaidAbortController.abort()
+      if (wrap.__mermaidRafId) cancelAnimationFrame(wrap.__mermaidRafId)
+    }
+    const ac = new AbortController()
+    wrap.__mermaidAbortController = ac
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+    // Disable default gestures to prevent scroll chaining and pinch-zoom penetration in Chrome
+    svg.style.touchAction = 'none'
+
+    // Cache BoundingClientRect, throttled on scroll to reduce reflow
+    let cachedRect = svg.getBoundingClientRect()
+    let rectDirty = false
+    const markRectDirty = () => { rectDirty = true }
+    window.addEventListener('resize', markRectDirty, { signal: ac.signal })
+    window.addEventListener('scroll', markRectDirty, { signal: ac.signal, capture: true })
+    const getRect = () => {
+      if (rectDirty) {
+        cachedRect = svg.getBoundingClientRect()
+        rectDirty = false
+      }
+      return cachedRect
+    }
+
+    // Precompute clamp bounds from initial viewBox
+    const minW = initVb[2] * 0.1
+    const maxW = initVb[2] * 10
+    const minH = initVb[3] * 0.1
+    const maxH = initVb[3] * 10
+    const clampVb = vb => {
+      const out = vb.slice()
+      out[2] = clamp(out[2], minW, maxW)
+      out[3] = clamp(out[3], minH, maxH)
+      return out
+    }
+
+    // Throttle DOM updates using requestAnimationFrame
+    let pendingVb = null
+    let rafId = null
+    const applyVb = () => {
+      if (pendingVb) {
+        wrap.__mermaidCurViewBox = pendingVb
+        setSvgViewBox(svg, pendingVb)
+        pendingVb = null
+      }
+      rafId = null
+      wrap.__mermaidRafId = null
+    }
+    const setCurVb = vb => {
+      pendingVb = clampVb(vb)
+      if (!rafId) {
+        rafId = requestAnimationFrame(applyVb)
+        wrap.__mermaidRafId = rafId
+      }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      lastPointerX: 0,
+      lastPointerY: 0
+    }
+
+    const onPointerDown = e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      const curVb = wrap.__mermaidCurViewBox
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (state.pointers.size === 1) {
+        state.startVb = curVb.slice()
+        state.lastPointerX = e.clientX
+        state.lastPointerY = e.clientY
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = curVb.slice()
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = state.pointers.values().next().value
+        const dxClient = p.x - state.lastPointerX
+        const dyClient = p.y - state.lastPointerY
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+        const dx = dxClient * (curVb[2] / rect.width)
+        const dy = dyClient * (curVb[3] / rect.height)
+        setCurVb([curVb[0] - dx, curVb[1] - dy, curVb[2], curVb[3]])
+        return
+      }
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const px = curVb[0] + (cx - rect.left) * (curVb[2] / rect.width)
+        const py = curVb[1] + (cy - rect.top) * (curVb[3] / rect.height)
+        setCurVb(zoomAtPoint(state.startVb, factor, px, py))
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      // Release PointerCapture to avoid event capture anomalies
+      if (svg.hasPointerCapture && svg.hasPointerCapture(e.pointerId)) {
+        svg.releasePointerCapture(e.pointerId)
+      }
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+      } else if (state.pointers.size === 1) {
+        const p = state.pointers.values().next().value
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+      }
+    }
+
+    const onWheel = e => {
+      // Prevent event bubbling from triggering external scroll
+      e.preventDefault()
+      e.stopPropagation()
+      // Normalize deltaY across deltaMode (Chrome uses pixels, Safari uses lines)
+      let delta = e.deltaY
+      if (e.deltaMode === 1) delta *= 16
+      else if (e.deltaMode === 2) delta *= 400
+
+      // Continuous zoom factor: smoother than fixed 1.1/0.9 steps
+      const zoomFactor = Math.pow(1.001, delta)
+
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      const px = curVb[0] + (e.clientX - rect.left) * (curVb[2] / rect.width)
+      const py = curVb[1] + (e.clientY - rect.top) * (curVb[3] / rect.height)
+      setCurVb(zoomAtPoint(curVb, zoomFactor, px, py))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (init) setCurVb(init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown, { signal: ac.signal })
+    svg.addEventListener('pointermove', onPointerMove, { signal: ac.signal })
+    svg.addEventListener('pointerup', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('pointercancel', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('wheel', onWheel, { passive: false, signal: ac.signal })
+    svg.addEventListener('dblclick', onDblClick, { signal: ac.signal })
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+      // Clean up event listeners and stale content before re-rendering
+      if (item.__mermaidAbortController) {
+        item.__mermaidAbortController.abort()
+      }
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      const oldError = item.querySelector('.mermaid-error')
+      if (oldError) oldError.remove()
+      let config = {}
+      try {
+        config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      } catch (e) {
+        console.warn('[mermaid] failed to parse dataset.config:', e)
+      }
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+      const handleError = err => {
+        console.error(`[mermaid] render failed for block #${index}:`, err)
+        const errorEl = document.createElement('div')
+        errorEl.className = 'mermaid-error'
+        errorEl.textContent = `Mermaid render error: ${err.message || err}`
+        mermaidSrc.insertAdjacentElement('afterend', errorEl)
+      }
+
+      try {
+        const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+        // mermaid v9 and v10 compatibility
+        if (typeof renderFn === 'string') {
+          renderMermaid(renderFn)
+        } else {
+          renderFn.then(({ svg }) => renderMermaid(svg)).catch(handleError)
+        }
+      } catch (err) {
+        handleError(err)
+      }
+    })
+  }
+
+  const codeToMermaid = $article => {
+    const codeMermaidEle = $article.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    const $article = document.getElementById('article-container')
+    if (!$article) return
+
+    if (true) codeToMermaid($article)
+    const $mermaid = $article.querySelectorAll('.mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script src="/js/custom.js"></script><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script id="canvas_nest" defer="defer" color="73,177,245" opacity="0.5" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/click-heart.min.js" async="async" mobile="false"></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"]):not([data-fancybox])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      if (!item.parentNode) return
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || ''
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    const responseURL = e.request && e.request.responseURL
+    if (e.request && e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : responseURL && (window.location.href = responseURL)
+    } else if (responseURL) {
+      window.location.href = responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章..." type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.7.1.260810"></script></div></div></body></html>

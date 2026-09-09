@@ -1,0 +1,1182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>周记 - 2026-W36</title>
+    <url>/2026/09/2026-W36/</url>
+    <content><![CDATA[本周总结做了什么学习新人培训课程了解部门架构和知识体系，明确发展方向探索内部 AI 平台完善我的 blog
+学到了什么学到了内部 AI 平台如何部署
+踩了什么坑deep seek harness 的 API 配置没这么麻烦，直接自定义一个供应商把 API 和地址填进去就好了
+下周计划熟悉团队负责的文件资源共享系统
+]]></content>
+      <categories>
+        <category>运维周记</category>
+      </categories>
+      <tags>
+        <tag>周记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>运维故障排查清单（40 项）</title>
+    <url>/2026/08/%E8%BF%90%E7%BB%B4%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E6%B8%85%E5%8D%95/</url>
+    <content><![CDATA[
+使用原则：先定位，再解决。 清单里的”解决方法”是答案，但工作里的真正难点是——用工具搞清楚”问题到底出在哪一层”。
+排查三步法：① 看现象 → ② 用工具定位（ping&#x2F;traceroute&#x2F;nslookup&#x2F;netstat&#x2F;日志）→ ③ 对症解决。经典例题：ping 通 IP 但 ping 不通域名 &#x3D; DNS 的锅，不是网络的锅。
+
+一、网络类（14 项）
+
+
+#
+故障
+解决方法
+
+
+
+1
+网络不通
+检查物理线路、交换机端口、网卡驱动和配置；用 ping、traceroute 定位
+
+
+2
+网络速度慢
+分析带宽使用，检查广播风暴，调整端口速率协商设置
+
+
+3
+设备掉线频繁
+检查电源稳定性、散热、链路质量及设备固件版本
+
+
+9
+IP 冲突
+通过 ARP 表、DHCP 服务器日志排查重复 IP，重新分配
+
+
+10
+DNS 解析问题
+检查本地 DNS 缓存、DNS 服务器配置和解析链路
+
+
+11
+路由问题
+检查路由表、静态路由配置和动态路由协议状态
+
+
+12
+防火墙阻断
+检查防火墙规则、安全策略和 NAT 转换配置
+
+
+18
+IoT 设备离线
+检查设备供电、无线信号、固件及网络协议配置
+
+
+26
+内网访问缓慢
+分析网络流量，检查广播风暴、ARP 欺骗或内部 DDoS
+
+
+27
+内网资源访问受限
+确认 ACL、VLAN 划分和访问权限设置
+
+
+28
+WAN 链路故障
+检查运营商线路、路由器 WAN 口状态和连接配置
+
+
+29
+WAN 带宽利用率过高
+分析流量统计，优化带宽分配，考虑 QoS 或扩容
+
+
+30
+公有云服务不可达
+检查公网出口、NAT 转换和安全组策略
+
+
+31
+私有云资源无法访问
+核实 VPC 网络配置、路由表和子网关联
+
+
+二、系统类（6 项）
+
+
+#
+故障
+解决方法
+
+
+
+4
+服务器宕机
+检查硬件故障（电源、硬盘）、系统日志，恢复或重装系统
+
+
+8
+系统资源不足
+优化系统配置，清理无用进程，增加资源或扩展硬件
+
+
+14
+更新导致不兼容
+更新前测试兼容性，保持系统和应用同步更新
+
+
+34
+系统负载过高
+优化资源分配，调整应用性能和缓存设置
+
+
+39
+文件系统损坏
+使用 fsck 命令修复文件系统，确保数据一致性
+
+
+40
+系统启动失败
+检查硬件、系统配置（如 fstab），使用救援模式恢复
+
+
+三、存储类（3 项）
+
+
+#
+故障
+解决方法
+
+
+
+5
+存储故障
+使用 RAID 恢复数据，检查磁盘健康状况，及时更换故障盘
+
+
+22
+NAS&#x2F;SAN 连接问题
+检查光纤通道或 iSCSI 链路，确认存储阵列与主机连接
+
+
+23
+存储容量不足
+清理无用数据，优化存储配额，扩展存储容量
+
+
+四、数据库类（2 项）
+
+
+#
+故障
+解决方法
+
+
+
+6
+数据库连接失败
+检查数据库服务状态、监听地址和端口、网络配置和防火墙
+
+
+7
+数据库性能下降
+优化 SQL，调整索引，分析 CPU&#x2F;内存&#x2F;I&#x2F;O 资源使用
+
+
+五、安全与权限类（5 项）
+
+
+#
+故障
+解决方法
+
+
+
+13
+安全漏洞
+定期更新补丁，加强安全配置，部署入侵检测系统
+
+
+35
+未授权访问
+安全审计，修复漏洞，加强访问控制和数据加密
+
+
+36
+权限管理混乱
+规范权限分配流程，严格控制范围，定期审计
+
+
+37
+数据丢失或损坏
+完善备份策略，定期恢复测试，加密关键数据
+
+
+38
+软件许可证过期
+设立许可证管理，建立库存档案，定期审查合规性
+
+
+六、虚拟化与云类（2 项）
+
+
+#
+故障
+解决方法
+
+
+
+16
+虚拟机网络问题
+检查虚拟交换机配置、端口组和网络策略
+
+
+17
+虚拟机迁移后网络异常
+核实 MAC 地址漂移、IP 分配和网络策略迁移
+
+
+七、服务类（4 项）
+
+
+#
+故障
+解决方法
+
+
+
+19
+Web 服务不可用
+检查 HTTP(S) 服务状态、网络端口和 SSL 证书
+
+
+20
+邮件服务宕机
+检查 SMTP&#x2F;POP3&#x2F;IMAP 状态，查看邮件队列和日志
+
+
+24
+负载均衡不生效
+确认策略、会话保持设置及后端服务器状态
+
+
+25
+请求分发异常
+排查负载均衡器日志、权重分配和轮询算法
+
+
+八、备份类（1 项）
+
+
+#
+故障
+解决方法
+
+
+
+15
+备份失败
+检查存储设备状态，调整备份策略，确保网络稳定
+
+
+九、监控与自动化类（3 项）
+
+
+#
+故障
+解决方法
+
+
+
+21
+监控报警失效
+核实监控阈值、报警设置和网络探针状态
+
+
+32
+日志记录不当
+优化日志配置，设置轮转策略，定期清理无效日志
+
+
+33
+自动化脚本执行错误
+审查脚本配置，确保参数正确，实施权限控制
+
+
+
+优先掌握（基础架构岗最常碰到）网络类 1 &#x2F; 9 &#x2F; 10 &#x2F; 12 + 系统类 4 &#x2F; 8 + 数据库类 6 &#x2F; 7 + 服务类 19 + 监控类 21
+用法：每遇到一个故障，处理完后回来在本清单对应条目下补一行”实战记录”（现象→工具→根因），这张表就会变成专属实战知识库。
+]]></content>
+      <categories>
+        <category>知识库</category>
+      </categories>
+      <tags>
+        <tag>故障排查</tag>
+        <tag>运维</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>文件共享系统自动化运维方案</title>
+    <url>/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BF%90%E7%BB%B4%E6%96%B9%E6%A1%88/</url>
+    <content><![CDATA[
+适用场景：已部署成熟文件共享系统（Nextcloud &#x2F; Seafile &#x2F; Alist &#x2F; FileBrowser &#x2F; 自研等）的自动化运维。核心诉求：备份、监控、同步、清理、权限管理五大模块的自动化。技术栈：Shell + Python + Cron + rsync&#x2F;rclone + 告警 Webhook。
+
+
+一、自动化运维整体架构graph TD    A[文件共享系统] --&gt; B[数据层]    A --&gt; C[配置层]    A --&gt; D[API层]    B --&gt; E[备份模块]    C --&gt; E    D --&gt; F[监控模块]    B --&gt; G[同步模块]    B --&gt; H[清理模块]    D --&gt; I[权限管理模块]    E --&gt; J[本机备份]    E --&gt; K[远端备份 rsync]    E --&gt; L[对象存储 rclone]    F --&gt; M[告警通知]    G --&gt; N[异地/镜像]    H --&gt; O[回收站/归档]    I --&gt; P[用户/组策略]    J --&gt; Q[定时任务 Cron]    K --&gt; Q    L --&gt; Q    M --&gt; Q    N --&gt; Q    O --&gt; Q    P --&gt; Q
+
+
+二、五大自动化模块详解模块 1：备份自动化（Backup）目标：数据 + 配置 + 数据库 三重备份，可恢复，防单点故障。
+
+
+
+备份对象
+方式
+频率
+
+
+
+文件数据
+rsync 增量 &#x2F; tar 归档
+每日
+
+
+数据库
+mysqldump &#x2F; pg_dump &#x2F; sqlite3 .backup
+每日
+
+
+配置文件
+tar 打包
+每次变更
+
+
+本机备份
+保留 N 天轮转
+自动清理
+
+
+远端备份
+rsync 到远端服务器
+每日
+
+
+对象存储
+rclone 到 S3&#x2F;OSS&#x2F;MinIO
+每日
+
+
+通用备份脚本逻辑（backup.sh）：
+#!/usr/bin/env bashset -euo pipefail# 配置DATA_DIR=&quot;/path/to/data&quot;          # 数据目录DB_NAME=&quot;fileshare&quot;               # 数据库名BACKUP_DIR=&quot;/backup/daily&quot;        # 本机备份目录REMOTE_HOST=&quot;backup@remote&quot;       # 远端服务器REMOTE_DIR=&quot;/backup/fileshare&quot;    # 远端备份目录RCLONE_REMOTE=&quot;oss:fileshare&quot;     # 对象存储DATE=$(date +%Y%m%d_%H%M%S)LOG=&quot;/var/log/fileshare-backup.log&quot;log() &#123; echo &quot;[$(date &#x27;+%F %T&#x27;)] $*&quot; | tee -a &quot;$LOG&quot;; &#125;# 1. 数据库备份log &quot;备份数据库...&quot;mysqldump -u backup -p&quot;$DB_PASS&quot; &quot;$DB_NAME&quot; &gt; &quot;$&#123;BACKUP_DIR&#125;/db_$&#123;DATE&#125;.sql&quot;# 2. 数据目录备份（tar 归档）log &quot;备份数据目录...&quot;tar -czf &quot;$&#123;BACKUP_DIR&#125;/data_$&#123;DATE&#125;.tar.gz&quot; -C &quot;$(dirname &quot;$DATA_DIR&quot;)&quot; &quot;$(basename &quot;$DATA_DIR&quot;)&quot;# 3. 本机保留策略轮转（保留 7 天）log &quot;清理本机过期备份...&quot;find &quot;$BACKUP_DIR&quot; -name &quot;*.tar.gz&quot; -mtime +7 -deletefind &quot;$BACKUP_DIR&quot; -name &quot;*.sql&quot; -mtime +7 -delete# 4. 同步到远端服务器（rsync over SSH）log &quot;同步到远端服务器...&quot;rsync -avz --delete &quot;$BACKUP_DIR/&quot; &quot;$&#123;REMOTE_HOST&#125;:$&#123;REMOTE_DIR&#125;/&quot;# 5. 同步到对象存储（rclone）log &quot;同步到对象存储...&quot;rclone sync &quot;$BACKUP_DIR&quot; &quot;$RCLONE_REMOTE&quot; --backup-dir &quot;$&#123;RCLONE_REMOTE&#125;/old&quot;# 6. 校验log &quot;校验备份...&quot;if [ -s &quot;$&#123;BACKUP_DIR&#125;/data_$&#123;DATE&#125;.tar.gz&quot; ]; then    log &quot;备份成功: data_$&#123;DATE&#125;.tar.gz&quot;else    log &quot;ERROR: 备份失败！&quot;    curl -s -X POST &quot;https://oapi.dingtalk.com/robot/send?access_token=$DING_TOKEN&quot; \        -H &#x27;Content-Type: application/json&#x27; \        -d &#x27;&#123;&quot;msgtype&quot;:&quot;text&quot;,&quot;text&quot;:&#123;&quot;content&quot;:&quot;文件共享系统备份失败！&quot;&#125;&#125;&#x27;    exit 1filog &quot;备份完成&quot;
+
+
+模块 2：监控告警自动化（Monitoring）目标：主动发现故障，而非被动响应。
+
+
+
+监控项
+指标
+告警阈值
+
+
+
+系统资源
+CPU &#x2F; 内存 &#x2F; 磁盘
+磁盘 &gt; 85%
+
+
+服务状态
+进程 &#x2F; 端口 &#x2F; HTTP
+不可达即告警
+
+
+数据增长
+目录大小 &#x2F; 文件数
+异常突增
+
+
+备份状态
+备份是否成功
+失败即告警
+
+
+证书
+SSL 到期
+提前 30 天
+
+
+通用监控脚本逻辑（monitor.sh）：
+#!/usr/bin/env bashset -euo pipefail# 配置SERVICE_URL=&quot;https://fileshare.example.com&quot;DISK_THRESHOLD=85LOG=&quot;/var/log/fileshare-monitor.log&quot;ALERT_URL=&quot;https://oapi.dingtalk.com/robot/send?access_token=$DING_TOKEN&quot;alert() &#123; curl -s -X POST &quot;$ALERT_URL&quot; -H &#x27;Content-Type: application/json&#x27; \    -d &quot;&#123;\&quot;msgtype\&quot;:\&quot;text\&quot;,\&quot;text\&quot;:&#123;\&quot;content\&quot;:\&quot;$1\&quot;&#125;&#125;&quot;; &#125;# 1. 服务可用性检查if ! curl -sf -o /dev/null &quot;$SERVICE_URL&quot;; then    alert &quot;⚠️ 文件共享系统不可达: $SERVICE_URL&quot;fi# 2. 磁盘使用率检查DISK_USAGE=$(df -h / | awk &#x27;NR==2 &#123;print $5&#125;&#x27; | tr -d &#x27;%&#x27;)if [ &quot;$DISK_USAGE&quot; -gt &quot;$DISK_THRESHOLD&quot; ]; then    alert &quot;⚠️ 磁盘使用率过高: $&#123;DISK_USAGE&#125;%&quot;fi# 3. 进程检查if ! pgrep -f &quot;fileshare&quot; &gt; /dev/null; then    alert &quot;⚠️ 文件共享进程未运行&quot;fi# 4. SSL 证书到期检查CERT_DAYS=$(echo | openssl s_client -servername fileshare.example.com \    -connect fileshare.example.com:443 2&gt;/dev/null | \    openssl x509 -noout -enddate 2&gt;/dev/null | cut -d= -f2)# ... 计算剩余天数，&lt;30 天告警
+
+
+模块 3：同步自动化（Sync）目标：多节点&#x2F;异地容灾，或与外部存储同步。
+
+
+
+场景
+方式
+
+
+
+异地备份
+rsync &#x2F; rclone 到远端
+
+
+对象存储
+rclone 同步到 S3&#x2F;MinIO&#x2F;OSS
+
+
+多节点实时
+lsyncd 实时同步
+
+
+客户端
+官方客户端 &#x2F; WebDAV
+
+
+通用同步脚本逻辑（sync.sh）：
+#!/usr/bin/env bashset -euo pipefail# 配置LOCAL_DIR=&quot;/data/fileshare&quot;REMOTE_HOST=&quot;backup@remote&quot;REMOTE_DIR=&quot;/data/fileshare-mirror&quot;RCLONE_REMOTE=&quot;oss:fileshare&quot;# 1. rsync 增量同步到远端rsync -avz --delete &quot;$LOCAL_DIR/&quot; &quot;$&#123;REMOTE_HOST&#125;:$&#123;REMOTE_DIR&#125;/&quot;# 2. rclone 同步到对象存储rclone sync &quot;$LOCAL_DIR&quot; &quot;$RCLONE_REMOTE&quot; --checksum# 3. 记录同步状态echo &quot;[$(date &#x27;+%F %T&#x27;)] 同步完成&quot; &gt;&gt; /var/log/fileshare-sync.log
+
+
+模块 4：清理自动化（Cleanup）目标：控制存储成本，避免磁盘耗尽。
+
+
+
+清理项
+策略
+
+
+
+回收站
+保留 N 天自动清空
+
+
+临时文件
+定期删除 /tmp、上传缓存
+
+
+过期分享
+自动撤销过期分享链接
+
+
+日志轮转
+logrotate 压缩归档
+
+
+大文件审计
+定期扫描 Top N 大文件
+
+
+通用清理脚本逻辑（cleanup.sh）：
+#!/usr/bin/env bashset -euo pipefail# 配置RECYCLE_DIR=&quot;/data/fileshare/.trash&quot;TMP_DIR=&quot;/tmp/fileshare-upload&quot;RETENTION_DAYS=30LOG=&quot;/var/log/fileshare-cleanup.log&quot;# 1. 清理回收站（保留 30 天）find &quot;$RECYCLE_DIR&quot; -type f -mtime +$RETENTION_DAYS -deletefind &quot;$RECYCLE_DIR&quot; -type d -empty -delete# 2. 清理临时上传文件find &quot;$TMP_DIR&quot; -type f -mtime +7 -delete# 3. 大文件审计（Top 20）echo &quot;=== Top 20 大文件 ===&quot; &gt;&gt; &quot;$LOG&quot;du -ah /data/fileshare | sort -rh | head -20 &gt;&gt; &quot;$LOG&quot;# 4. 磁盘空间报告df -h /data &gt;&gt; &quot;$LOG&quot;
+
+
+模块 5：权限管理自动化（Permission）目标：权限规范化、可审计、可回收。
+
+
+
+场景
+自动化逻辑
+
+
+
+新用户入职
+脚本自动创建账号 + 分配默认组
+
+
+用户离职
+自动禁用账号 + 转移&#x2F;归档数据
+
+
+定期审计
+扫描异常权限、过期账号
+
+
+分享管理
+统一设置分享有效期
+
+
+通用权限管理脚本逻辑（permission.sh）：
+#!/usr/bin/env bashset -euo pipefail# 配置API_BASE=&quot;https://fileshare.example.com/api&quot;API_TOKEN=&quot;$FILESHARE_API_TOKEN&quot;LOG=&quot;/var/log/fileshare-permission.log&quot;# 1. 新用户入职（从 CSV 读取）# 格式: username,group,emailwhile IFS=, read -r user group email; do    curl -s -X POST &quot;$API_BASE/users&quot; \        -H &quot;Authorization: Bearer $API_TOKEN&quot; \        -H &#x27;Content-Type: application/json&#x27; \        -d &quot;&#123;\&quot;username\&quot;:\&quot;$user\&quot;,\&quot;group\&quot;:\&quot;$group\&quot;,\&quot;email\&quot;:\&quot;$email\&quot;&#125;&quot;    echo &quot;[$(date &#x27;+%F %T&#x27;)] 创建用户: $user&quot; &gt;&gt; &quot;$LOG&quot;done &lt; /etc/fileshare/new_users.csv# 2. 用户离职（从 CSV 读取）while IFS=, read -r user; do    curl -s -X POST &quot;$API_BASE/users/$user/disable&quot; \        -H &quot;Authorization: Bearer $API_TOKEN&quot;    echo &quot;[$(date &#x27;+%F %T&#x27;)] 禁用用户: $user&quot; &gt;&gt; &quot;$LOG&quot;done &lt; /etc/fileshare/disabled_users.csv# 3. 定期权限审计（扫描 90 天未登录账号）curl -s &quot;$API_BASE/users?last_login_before=90d&quot; \    -H &quot;Authorization: Bearer $API_TOKEN&quot; &gt;&gt; &quot;$LOG&quot;
+
+
+三、远端备份配置（rsync &#x2F; rclone）方式 A：rsync over SSH（远端 Linux 服务器）1. 配置 SSH 免密登录：
+# 在源服务器生成密钥ssh-keygen -t ed25519# 将公钥复制到远端服务器ssh-copy-id backup@remote-server
+
+2. 测试 rsync：
+rsync -avz /data/fileshare/ backup@remote-server:/backup/fileshare/
+
+3. 加入备份脚本（见模块 1 第 4 步）。
+方式 B：rclone（对象存储 &#x2F; 云盘）1. 安装并配置 rclone：
+# 安装curl https://rclone.org/install.sh | sudo bash# 交互式配置远端（选择 S3/OSS/MinIO 等）rclone config
+
+2. 测试 rclone：
+rclone ls oss:fileshare
+
+3. 加入备份脚本（见模块 1 第 5 步）。
+
+四、Cron 定时任务配置编辑 crontab：
+crontab -e
+
+添加定时任务：
+# 每日 02:00 备份0 2 * * * /opt/scripts/backup.sh# 每 5 分钟监控*/5 * * * * /opt/scripts/monitor.sh# 每日 03:00 同步0 3 * * * /opt/scripts/sync.sh# 每日 04:00 清理0 4 * * * /opt/scripts/cleanup.sh# 每周一 05:00 权限审计0 5 * * 1 /opt/scripts/permission.sh
+
+
+五、告警通知配置支持钉钉 &#x2F; 企业微信 &#x2F; 邮件 &#x2F; Slack Webhook。
+钉钉机器人示例：
+curl -s -X POST &quot;https://oapi.dingtalk.com/robot/send?access_token=$DING_TOKEN&quot; \    -H &#x27;Content-Type: application/json&#x27; \    -d &#x27;&#123;&quot;msgtype&quot;:&quot;text&quot;,&quot;text&quot;:&#123;&quot;content&quot;:&quot;文件共享系统告警&quot;&#125;&#125;&#x27;
+
+
+六、实施路线图阶段一：备份与恢复（保命）
+ 编写备份脚本（数据 + 配置 + 数据库）
+ 配置本机 + 远端（rsync&#x2F;rclone）备份
+ 配置 Cron 定时任务
+ 演练恢复流程（关键！）
+
+阶段二：监控与告警（感知）
+ 部署监控脚本（磁盘&#x2F;服务&#x2F;备份状态）
+ 接入钉钉&#x2F;企业微信告警
+
+阶段三：同步与清理（优化）
+ 配置异地&#x2F;对象存储同步
+ 配置回收站与临时文件清理
+ 配置日志轮转
+
+阶段四：权限与审计（规范）
+ 编写用户生命周期管理脚本
+ 配置定期权限审计
+
+
+七、注意事项
+备份存储位置：务必本机 + 远端双备份，避免单点故障。
+数据库一致性：备份数据库前先停止写入或使用快照，避免不一致。
+恢复演练：定期（如每月）在测试环境演练恢复，确保备份可用。
+密钥安全：SSH 密钥、API Token 使用环境变量或密钥管理，勿硬编码。
+日志审计：所有自动化操作记录日志，便于追溯。
+
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>自动化运维</tag>
+        <tag>文件共享</tag>
+        <tag>备份</tag>
+        <tag>监控</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>文件共享系统故障排查思路与步骤</title>
+    <url>/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E6%80%9D%E8%B7%AF%E4%B8%8E%E6%AD%A5%E9%AA%A4/</url>
+    <content><![CDATA[
+适用场景：文件共享系统（Samba &#x2F; NFS &#x2F; Windows 共享 &#x2F; OSS 等）出现访问异常、卡顿、权限报错、掉线等故障时的排查。核心原则：从外到内、从现象到根因，先看日志，逐层排除。技术栈：ping &#x2F; nc &#x2F; ss &#x2F; systemctl &#x2F; df &#x2F; fsck &#x2F; smbstatus &#x2F; 日志分析。
+
+
+一、排查总览：五层递进法文件共享系统出问题时，不要一上来就猜，而是按 “从外到内” 的层次逐层排除：
+flowchart TD    A[故障现象] --&gt; B[第1层: 客户端/网络层]    B --&gt; C[第2层: 服务/协议层]    C --&gt; D[第3层: 存储/文件系统层]    D --&gt; E[第4层: 权限/认证层]    E --&gt; F[第5层: 资源/性能层]    F --&gt; G[定位根因]
+
+为什么从外到内？ 因为越外层的问题越常见、越容易排查。先确认”网络通不通、端口通不通”，再深入服务内部，能避免在错误的方向上浪费时间。
+
+二、第 1 步：明确故障现象排查前必须先确认现象，避免盲目操作。先记录现象、时间点、影响范围，再动手。
+
+
+
+现象类型
+典型表现
+可能方向
+
+
+
+完全无法访问
+挂载失败、连接超时
+网络、服务未启动、防火墙
+
+
+能连但很慢
+打开文件卡顿、传输慢
+带宽、磁盘 IO、并发
+
+
+部分文件打不开
+特定目录&#x2F;文件报错
+权限、文件损坏、路径
+
+
+权限报错
+Permission denied
+认证、ACL、共享配置
+
+
+偶发中断
+传输中断、掉线
+网络抖动、超时配置
+
+
+
+关键：现象不同，排查方向完全不同。比如”完全无法访问”和”能连但很慢”是两套完全不同的排查路径。
+
+
+三、第 2 步：客户端与网络层排查（最外层）flowchart LR    A[客户端] --&gt;|1. ping| B[网络连通性]    A --&gt;|2. telnet/nc| C[端口连通性]    A --&gt;|3. 防火墙| D[放行规则]    A --&gt;|4. DNS| E[主机名解析]
+
+具体命令（以 Linux 客户端访问 Samba&#x2F;NFS 为例）：
+# 1. 网络连通性测试ping -c 4 &lt;server_ip&gt;# 2. 端口连通性测试（Samba=445/139，NFS=2049）telnet &lt;server_ip&gt; 445nc -zv &lt;server_ip&gt; 2049# 3. 检查本机防火墙sudo iptables -L -n | grep 445sudo ufw status# 4. 检查 DNS/主机名解析nslookup &lt;server_hostname&gt;getent hosts &lt;server_hostname&gt;
+
+排查要点：
+
+ping 不通 → 网络层问题（物理链路、VLAN、路由）
+ping 通但端口不通 → 服务端防火墙或服务未监听
+端口通但挂载失败 → 进入下一层
+
+
+四、第 3 步：服务与协议层排查（核心层）确认服务进程是否存活、是否正常监听端口。这一层最关键的是看日志。
+# 1. 检查服务进程状态systemctl status smbd        # Sambasystemctl status nfs-server  # NFSsystemctl status sshd        # SFTP# 2. 检查端口监听ss -tlnp | grep -E &#x27;445|139|2049&#x27;# 3. 查看服务日志（最关键！）tail -f /var/log/samba/log.smbdjournalctl -u smbd -ftail -f /var/log/messages | grep nfs# 4. 查看当前连接会话smbstatus          # Samba 当前连接showmount -a       # NFS 当前挂载
+
+排查要点：
+
+服务未启动 → 查看日志找启动失败原因（配置错误、依赖缺失）
+服务在但连接异常 → 看日志中的具体报错码
+日志是定位问题的第一手资料，务必优先查看
+
+
+五、第 4 步：存储与文件系统层排查确认底层磁盘、文件系统是否健康。磁盘满是最常见的根因之一。
+# 1. 磁盘空间检查（共享目录所在分区）df -hdf -i   # inode 是否耗尽（小文件多时常见）# 2. 磁盘健康检查sudo smartctl -a /dev/sda   # 硬件健康dmesg | grep -i error       # 内核报错# 3. 文件系统完整性sudo fsck -n /dev/sda1      # 只读检查（需卸载）sudo xfs_repair -n /dev/sda1  # XFS# 4. 挂载状态mount | grep -E &#x27;samba|nfs&#x27;
+
+排查要点：
+
+df -h 显示 100% → 磁盘满，最常见原因之一
+df -i 显示 100% → inode 耗尽（大量小文件）
+磁盘报 IO 错误 → 硬件故障，需更换
+
+
+六、第 5 步：权限与认证层排查# 1. 检查共享目录权限ls -ld /srv/sharegetfacl /srv/share   # 查看 ACL# 2. Samba 用户认证pdbedit -L            # 列出 Samba 用户testparm             # 校验 Samba 配置# 3. NFS 导出配置cat /etc/exportsexportfs -v          # 查看实际导出# 4. 检查 SELinux/AppArmorgetenforcels -Z /srv/share     # SELinux 上下文
+
+排查要点：
+
+权限不足 → 调整目录权限或 ACL
+认证失败 → 检查用户是否存在于 Samba 数据库
+SELinux 拦截 → 查看 audit.log 并调整上下文
+
+
+七、第 6 步：资源与性能层排查# 1. 系统负载top / htopuptime# 2. 内存/交换分区free -h# 3. 磁盘 IO 性能iostat -x 2iotop# 4. 网络带宽iftopnload# 5. 并发连接数smbstatus | wc -l
+
+排查要点：
+
+CPU&#x2F;内存高 → 服务过载，考虑扩容
+磁盘 IO 高 → 存储瓶颈，考虑 SSD&#x2F;缓存
+网络带宽打满 → 限流或扩容带宽
+
+
+八、完整排查决策树把上面六步串成一张决策树，遇到故障按图索骥：
+flowchart TD    S[故障发生] --&gt; A&#123;能 ping 通?&#125;    A -- 否 --&gt; B[网络层问题&lt;br/&gt;查链路/VLAN/路由]    A -- 是 --&gt; C&#123;端口能通?&#125;    C -- 否 --&gt; D[防火墙/服务未监听&lt;br/&gt;查 iptables/服务状态]    C -- 是 --&gt; E&#123;服务进程正常?&#125;    E -- 否 --&gt; F[服务崩溃/配置错误&lt;br/&gt;查服务日志]    E -- 是 --&gt; G&#123;磁盘空间充足?&#125;    G -- 否 --&gt; H[磁盘满/inode耗尽&lt;br/&gt;清理或扩容]    G -- 是 --&gt; I&#123;权限正确?&#125;    I -- 否 --&gt; J[权限/认证问题&lt;br/&gt;查 ACL/SELinux/用户]    I -- 是 --&gt; K&#123;性能正常?&#125;    K -- 否 --&gt; L[资源瓶颈&lt;br/&gt;查 CPU/IO/带宽]    K -- 是 --&gt; M[深入日志&lt;br/&gt;定位根因]
+
+
+九、自动化排查与”查询、点击”实现排查流程可以封装成脚本，再做成”点击即可”的 Web 界面，实现自动化运维。
+1. 一键健康检查脚本把上面的命令封装成 health_check.sh：
+#!/bin/bash# 一键健康检查脚本SERVER_IP=$1echo &quot;=== 1. 网络连通性 ===&quot;ping -c 3 $SERVER_IP &amp;&amp; echo &quot;OK&quot; || echo &quot;FAIL&quot;echo &quot;=== 2. 端口连通性 ===&quot;nc -zv $SERVER_IP 445 2&gt;&amp;1echo &quot;=== 3. 服务状态 ===&quot;ssh $SERVER_IP &quot;systemctl status smbd --no-pager | head -5&quot;echo &quot;=== 4. 磁盘空间 ===&quot;ssh $SERVER_IP &quot;df -h | grep -E &#x27;srv|Filesystem&#x27;&quot;echo &quot;=== 5. 当前连接 ===&quot;ssh $SERVER_IP &quot;smbstatus | head -20&quot;
+
+2. 做成”点击”的 Web 界面flowchart LR    A[Web界面&lt;br/&gt;点击按钮] --&gt; B[后端API&lt;br/&gt;Flask/FastAPI]    B --&gt; C[执行排查脚本]    C --&gt; D[返回结果&lt;br/&gt;JSON/图表]    D --&gt; E[前端展示&lt;br/&gt;Vue/React]
+
+技术栈建议：
+
+后端：Python (FastAPI&#x2F;Flask) + 定时任务 (Celery)
+前端：Vue&#x2F;React，按钮触发 API
+监控：Prometheus + Grafana（自动采集指标，异常告警）
+告警：Alertmanager → 钉钉&#x2F;企业微信&#x2F;邮件
+
+3. 自动化运维的完整闭环flowchart LR    A[监控采集&lt;br/&gt;Prometheus] --&gt; B[异常检测]    B --&gt; C[自动告警]    C --&gt; D[自动执行修复脚本]    D --&gt; E[验证恢复]    E --&gt; F[记录工单/日志]
+
+
+十、核心总结排查文件共享系统故障的黄金法则：
+
+先看日志 —— 日志是定位问题的第一手资料，比任何猜测都可靠
+从外到内 —— 网络 → 服务 → 存储 → 权限 → 性能，逐层排除
+先复现再修复 —— 确认能稳定复现，修复后验证
+记录归档 —— 每次故障都记录，形成知识库，下次更快
+
+最常遇到的 5 个根因（按概率排序）：
+
+磁盘空间满（df -h 100%）
+服务进程崩溃&#x2F;未启动
+防火墙&#x2F;安全组拦截端口
+权限&#x2F;认证配置错误
+网络抖动或带宽瓶颈
+
+自动化方向： 把排查命令封装成脚本 → 用 Web 界面”点击”触发 → 用 Prometheus 自动监控指标并告警 → 形成”监控-告警-自愈”闭环。
+
+实战建议：每遇到一个故障，处理完后回来在本篇对应步骤下补一行”实战记录”（现象 → 工具 → 根因），这张排查指南就会变成你的专属实战知识库。
+
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>故障排查</tag>
+        <tag>运维</tag>
+        <tag>文件共享</tag>
+        <tag>Samba</tag>
+        <tag>NFS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>「脚本仙人」系统开发总结</title>
+    <url>/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[
+项目定位：小组文件&#x2F;脚本共享系统，支持版本管理、简介搜索、排序筛选、成员共享、管理员权限。技术栈：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。架构：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。
+
+
+一、系统概览核心能力
+
+
+能力
+说明
+
+
+
+用户认证
+scrypt 密码哈希、HMAC 签名 token、登录失败锁定
+
+
+文件管理
+上传&#x2F;下载&#x2F;预览&#x2F;重命名&#x2F;简介&#x2F;删除
+
+
+版本管理
+多版本、回滚、删除版本
+
+
+搜索筛选
+关键词（名称+简介）、上传者、后缀、排序
+
+
+共享协作
+公共文件、指定成员共享
+
+
+权限控制
+owner 优先，admin 拥有全部管理权
+
+
+架构分层graph LR    A[Router&lt;br/&gt;路由分发] --&gt; B[Controller&lt;br/&gt;请求处理]    B --&gt; C[Service&lt;br/&gt;业务逻辑]    C --&gt; D[Repo&lt;br/&gt;数据访问]    D --&gt; E[(SQLite)]
+
+四层分离的价值：每个新功能（简介、筛选、版本删除、共享）都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
+
+二、开发过程回顾阶段一：基础搭建
+零依赖架构：手写 multipart 解析、静态文件服务、token 签名
+SQLite 建表 + WAL 模式：保证并发读写
+
+阶段二：核心功能迭代按用户需求逐步叠加：
+graph LR    A[基础上传下载] --&gt; B[简介]    B --&gt; C[简介搜索]    C --&gt; D[排序]    D --&gt; E[上传者/后缀筛选]    E --&gt; F[&quot;其它筛选&quot;]    F --&gt; G[版本删除]    G --&gt; H[admin 权限]    H --&gt; I[成员共享]
+
+阶段三：部署与运维
+内网访问：局域网 IP + 防火墙
+上传 GitHub：版本管理
+性能与安全检测
+
+
+三、关键经验1. 分层架构的价值Router → Controller → Service → Repo 四层分离，让每个新功能都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
+2. 零依赖的取舍
+
+
+优点
+代价
+
+
+
+无供应链风险
+手写 multipart 解析
+
+
+部署简单（只需 Node 环境）
+手写 token 签名
+
+
+体积小
+手写静态服务
+
+
+
+需自行处理边界情况
+
+
+3. 数据库迁移策略用 PRAGMA table_info 检查列是否存在，再 ALTER TABLE 增量迁移，兼容旧数据库，避免破坏已有数据。
+-- 示例：检查列是否存在，不存在则添加PRAGMA table_info(files);-- 若缺少某列，则执行ALTER TABLE files ADD COLUMN description TEXT DEFAULT &#x27;&#x27;;
+
+4. 安全防护意识
+
+
+风险
+防护措施
+
+
+
+SQL 注入
+排序字段用白名单校验
+
+
+路径穿越
+文件名&#x2F;路径严格校验
+
+
+密码安全
+scrypt 加盐哈希
+
+
+登录爆破
+失败次数锁定
+
+
+
+四、踩过的坑与教训教训 1：前端内联传 JSON 导致属性损坏（最深刻）问题：共享按钮 onclick 内联传入 JSON.stringify(sharedWith)，当含双引号时提前终止 HTML 属性，导致按钮无法点击、无法覆盖共享。
+教训：不要在 HTML 属性内联传复杂 JSON。应只传 id，从数据源（全局缓存&#x2F;接口）读取。这是本次最典型的”看似简单实则致命”的 bug。
+&lt;!-- ❌ 错误：内联传 JSON，双引号会破坏属性 --&gt;&lt;button onclick=&quot;share(&#123;&#123; JSON.stringify(sharedWith) &#125;&#125;)&quot;&gt;共享&lt;/button&gt;&lt;!-- ✅ 正确：只传 id，从数据源读取 --&gt;&lt;button onclick=&quot;share(fileId)&quot;&gt;共享&lt;/button&gt;
+
+教训 2：API 路径前缀重复问题：api(&#39;/api/users&#39;) 因 api() 已自动加 /api 前缀，导致双重前缀 404。
+教训：封装统一请求函数时，调用方必须清楚前缀规则，避免重复拼接。
+// ❌ 错误：api() 已自动加 /api，这里又写了一遍api(&#x27;/api/users&#x27;)// ✅ 正确：只写相对路径api(&#x27;/users&#x27;)
+
+教训 3：cmd 批处理语法陷阱问题：测试登录锁定时，cmd 的 for 循环报”此时不应有 i”。
+教训：复杂逻辑用 Node 脚本而非 cmd 批处理，跨平台更可靠。
+教训 4：Git 远程冲突问题：GitHub 网页端修改 README 后，本地 push 被拒。
+教训：多人&#x2F;多端协作时，push 前先 pull --allow-unrelated-histories 合并。
+git pull origin main --allow-unrelated-historiesgit push origin main
+
+教训 5：删除操作的边界保护问题：删除最后一个版本时返回 500。
+教训：删除类操作必须考虑边界条件（至少保留一个版本），并在 service 层捕获转换为友好错误。
+// 至少保留一个版本if (versions.length &lt;= 1) &#123;  throw new Error(&#x27;至少保留一个版本，无法删除&#x27;);&#125;
+
+教训 6：测试污染生产数据问题：测试过程中 admin 账号被锁定、testmember 残留。
+教训：测试应使用独立数据或测试账号，避免污染生产数据；测试后需清理。
+
+五、总体心得
+小步快跑：每个需求独立迭代、独立测试、独立提交，问题定位快。
+前后端联动：功能改动需同时考虑前端展示与后端逻辑，尤其注意数据传递方式（内联 vs 接口）。
+权限模型要统一：owner 优先 + admin 兜底，通过 _requireOwner &#x2F; _canRead 集中管理，避免散落各处。
+边界与异常：删除、空数据、非法输入都要有兜底，避免 500。
+版本管理：Git 提交记录清晰，每个功能一个 commit，便于回溯。
+
+
+
+总结：这个系统从零到一，经历了功能叠加、bug 修复、部署上线、GitHub 托管，是一个完整且典型的全栈小项目实践。它教会我的不仅是技术，更是如何用分层架构应对快速迭代、如何用安全意识规避常见风险、如何从踩坑中沉淀方法论。
+
+
+📦 项目地址
+GitHub：Filehub-4-Group
+
+
+欢迎 Star、Fork，也欢迎提 Issue 交流讨论。
+
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>文件共享</tag>
+        <tag>Node.js</tag>
+        <tag>全栈开发</tag>
+        <tag>系统设计</tag>
+        <tag>零依赖</tag>
+        <tag>SQLite</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从零搭建一个小组脚本共享系统：零依赖 Node.js 的工程化实践</title>
+    <url>/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/</url>
+    <content><![CDATA[
+项目定位：小组内网协作的脚本共享系统，支持版本管理、权限控制、小组共享。技术栈：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。架构：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。本文定位：上一篇《「脚本仙人」系统开发总结》的完善优化篇，重点补充部署实战经验。
+
+
+一、为什么做这个项目在小组日常开发中，经常需要共享部署脚本、工具脚本、配置文件。传统的做法是：
+
+发到群里 &#x2F; 网盘 —— 版本混乱，谁改了什么说不清
+用 Git 仓库 —— 对非开发同学不友好，且脚本经常要”临时改一版”
+用现成的文件共享工具 —— 没有版本管理，没有权限控制
+
+于是我们决定自己写一个面向小组内网协作的脚本共享系统，核心诉求：
+
+共享脚本：小组内网成员都能上传、下载、预览脚本
+版本管理：脚本可以多版本迭代，支持历史查看、回滚、更新说明
+权限控制：只有 owner 能改&#x2F;删&#x2F;共享，可读用户只能看
+零依赖：纯 Node.js 原生实现，node server.js 就能跑，不依赖任何构建工具
+
+
+为什么零依赖？因为公司安全软件会拦截 esbuild &#x2F; vite 等构建工具，纯原生实现可以完全避开这些麻烦。
+
+
+二、技术选型
+
+
+技术
+选择
+理由
+
+
+
+运行时
+Node.js 24+
+原生支持 node:sqlite，无需额外安装数据库
+
+
+数据库
+SQLite（node:sqlite）
+单文件、零配置、适合小组规模
+
+
+密码哈希
+scrypt（node:crypto）
+Node 内置，安全可靠
+
+
+HTTP 服务
+node:http
+原生，不依赖 express
+
+
+前端
+原生 HTML&#x2F;JS
+无构建，直接静态托管
+
+
+部署
+start.bat &#x2F; stop.bat
+Windows 内网后台常驻
+
+
+核心决策：零 npm 依赖。 整个项目只用 Node.js 内置模块（node:http、node:crypto、node:sqlite、node:fs 等），这是本项目最大的特色，也是工程化落地的重要考量。
+
+三、架构设计3.1 严格分层项目采用经典的分层架构：Router(路由) → Controller(控制器) → Service(业务) → Repo(数据)
+请求进入   │   ▼server.js                 ★ 入口层：启动、装配、优雅退出、初始化、数据迁移   │   ▼app.js                    ★ 装配层：注册路由表 + 中间件 + 全局错误边界   │  ├── middleware/auth.js   ★ 中间件：Bearer token 鉴权   │   ▼modules/&lt;name&gt;/   ├── *.routes.js        ★ 路由层：声明接口地图   ├── *.controller.js    ★ 控制器层：解析 HTTP 请求/响应   ├── *.service.js       ★ 服务层：业务规则校验，编排数据   └── *.repo.js          ★ 数据层：封装存储（SQLite + 磁盘文件）   │   ▼utils/                    ★ 工具层：http / logger / password / sqlite / audit
+
+3.2 各层职责
+
+
+层
+文件
+职责
+类比
+
+
+
+入口层
+server.js
+启动、监听、优雅退出、初始化、数据迁移
+大门
+
+
+装配层
+app.js
+组装所有模块、注册路由、全局错误边界
+前台调度
+
+
+中间件
+middleware/auth.js
+请求身份校验
+门卫
+
+
+路由层
+*.routes.js
+接口地图（who→what）
+菜单
+
+
+控制器层
+*.controller.js
+解析 req&#x2F;res，转 HTTP 语义
+服务员
+
+
+服务层
+*.service.js
+业务规则、编排
+厨师
+
+
+数据层
+*.repo.js
+读写存储
+仓库
+
+
+工具层
+utils/*.js
+公共设施
+公共设施
+
+
+3.3 依赖方向Controller → Service → Repo（依赖向下）上层只依赖下层的接口，下层不认识上层。→ 换存储(Repo)或换框架(Controller)不影响其他层。
+
+这种设计带来的好处：
+
+单一职责：每个文件只做一件事
+开闭原则：加新模块只需在 app.js 注册，不改核心
+可测试性：各层可以独立 mock 测试
+可维护性：业务逻辑集中在 Service，数据访问集中在 Repo
+
+
+四、核心功能4.1 认证与用户
+登录签发带过期时间的 token，连续失败锁定账号
+注册新用户，密码 scrypt 哈希存储
+管理员可禁用&#x2F;启用用户、改角色、重置密码
+
+4.2 文件 &#x2F; 脚本管理
+上传：支持文本&#x2F;脚本（JSON）和任意文件（multipart&#x2F;form-data）
+下载：流式下载，正确文件名和 MIME
+在线预览：文本类文件直接预览
+搜索：按文件名 &#x2F; 简介 &#x2F; 标签 模糊搜索
+标签：上传&#x2F;编辑时打标签，彩色标签云，点击一键筛选
+筛选：按上传者 &#x2F; 文件类型 &#x2F; 标签 组合筛选，按名称&#x2F;时间&#x2F;大小排序
+
+4.3 脚本版本管理（核心）
+新增版本：为脚本添加新版本，可填更新说明
+版本历史：查看所有版本（版本号&#x2F;大小&#x2F;更新人&#x2F;时间&#x2F;说明）
+查看版本：查看任意历史版本内容
+回滚：一键回滚到指定版本（切换当前版本指针，保留全部历史）
+
+4.4 小组共享
+共享给成员：指定用户名列表，共享给特定成员
+小组公共：设为公共文件，所有人可见
+权限控制：只有 owner 能改&#x2F;删&#x2F;共享；可读用户能下载&#x2F;预览&#x2F;看版本
+
+4.5 运维
+健康检查：GET /api/health 返回状态、磁盘、文件数、用户数
+审计日志：上传&#x2F;下载&#x2F;删除&#x2F;版本&#x2F;共享等操作记录到 SQLite + audit.log
+运行日志：按天滚动落盘到 data&#x2F;logs&#x2F;
+备份：backup.bat 一键备份 data&#x2F; 目录
+
+
+五、遇到的问题与解决方案开发过程中踩了不少坑，这里重点记录两个部署阶段遇到的实际问题。
+5.1 问题一：端口号被占用现象：
+在小组内网部署时，双击 start.bat 启动服务，但服务一直启动失败。查看日志发现：
+Error: listen EADDRINUSE: address already in use :::3000
+
+原因分析：
+3000 端口已经被其他进程占用了。排查后发现，之前手动启动过服务（node server.js），进程没有正常退出，一直占着 3000 端口。再次启动时，新进程无法绑定端口，直接报 EADDRINUSE 错误。
+更隐蔽的情况是：某个 node 进程占用了 3000 端口，但没有 PID 文件记录，导致 stop.bat 无法通过 PID 文件找到并停止它。
+解决方案：
+
+用 PID 文件精确定位进程：服务启动时把 process.pid 写入 data/server.pid，停止时读取 PID 文件精确结束对应进程，而不是粗暴地 taskkill /F /IM node.exe（那会误杀所有 node 进程）。
+
+// server.js 启动成功后写入 PIDserver.listen(config.port, config.host, () =&gt; &#123;  writeFileSync(PID_FILE, String(process.pid), &#x27;utf8&#x27;)&#125;)
+
+
+start.bat 启动前检查端口：通过 netstat -ano | findstr :3000 检查端口是否被占用，若被占用则提示先停止旧进程。
+
+stop.bat 只杀 FileHub 进程：读取 PID 文件，用 taskkill /F /PID %PID% 只结束 FileHub 进程，不影响其他 node 程序。
+
+
+REM stop.bat 核心逻辑set /p PID=&lt;&quot;%PID_FILE%&quot;taskkill /F /PID %PID%
+
+
+经验总结：后台服务一定要用 PID 文件管理进程生命周期，避免”僵尸进程”占用端口。同时，停止脚本要精确定位目标进程，不要用 taskkill /IM 误杀所有同名进程。
+
+5.2 问题二：内网 IP 地址会变现象：
+服务启动后，start.bat 显示访问地址 http://&lt;本机内网IP&gt;:3000/，但同事反馈”昨天还能访问，今天打不开了”。
+原因分析：
+小组内网使用 DHCP 动态分配 IP，服务器的内网 IP 地址每天可能变化。昨天是 10.26.55.129，今天可能就变成 10.26.55.130 了。如果 start.bat 里硬编码了 IP，IP 一变就失效。
+解决方案：
+写一个 PowerShell 脚本 get-lan-ip.ps1，每次启动时实时检测当前内网 IP，而不是硬编码：
+# get-lan-ip.ps1 — 获取当前活动网卡的内网 IPv4 地址$ip = (Get-NetIPConfiguration |    Where-Object &#123; $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -eq &#x27;Up&#x27; &#125; |    Select-Object -First 1).IPv4Address.IPAddress# 若未找到，回退到任意非回环 IPv4 地址if (-not $ip) &#123;    $ip = (Get-NetIPAddress -AddressFamily IPv4 |        Where-Object &#123; $_.IPAddress -notlike &#x27;127.*&#x27; -and $_.IPAddress -notlike &#x27;169.254.*&#x27; &#125; |        Select-Object -First 1).IPAddress&#125;# 最终回退到本机回环if (-not $ip) &#123; $ip = &#x27;127.0.0.1&#x27; &#125;Write-Output $ip
+
+然后在 start.bat 中调用它，把检测到的 IP 显示给用户：
+REM start.bat 自动检测当前内网 IPfor /f &quot;delims=&quot; %%i in (&#x27;powershell -NoProfile -ExecutionPolicy Bypass -File &quot;%~dp0get-lan-ip.ps1&quot;&#x27;) do set LAN_IP=%%iif not defined LAN_IP set LAN_IP=127.0.0.1echo   访问地址: http://%LAN_IP%:3000/
+
+这样无论 IP 怎么变，start.bat 都会显示当前正确的内网访问地址。
+
+经验总结：内网部署时，IP 是动态的，不要硬编码。用脚本实时检测，或者用主机名（如 http://server-name:3000/）代替 IP。
+
+5.3 问题三：批处理文件中文乱码现象：
+start.bat 和 stop.bat 里写了中文提示，但运行时中文变成乱码，甚至报”不是内部或外部命令”。
+原因分析：
+Windows cmd 默认使用 GBK 代码页（936），而文件保存为 UTF-8 编码。UTF-8 的中文字节在 GBK 下被错误解码，导致中文被当作命令执行。
+解决方案：
+将 .bat 文件保存为 GBK 编码（Windows 中文系统标准），与 cmd 默认代码页匹配，中文正常显示。
+
+经验总结：Windows 批处理文件的中文编码要与 cmd 代码页一致。中文 Windows 系统用 GBK，否则中文会乱码。
+
+
+六、部署与使用6.1 内网小组部署# 启动（后台运行，监听 0.0.0.0，小组内网可访问）start.bat# 停止stop.bat# 备份 data/ 目录（数据库 + 文件 + 日志）backup.bat
+
+启动后，start.bat 会自动检测当前内网 IP 并显示访问地址：
+FileHub 服务已后台启动！  进程 PID: 19428  访问地址: http://10.26.55.129:3000/  查看日志: data\server.log（及 data\logs\ 按天日志）  停止服务: 运行 stop.bat
+
+6.2 演示账号
+admin &#x2F; 123456（首次启动自动创建）
+
+
+七、用到的架构思想（面试&#x2F;学习点）
+
+
+思想
+体现
+
+
+
+分层架构
+Controller&#x2F;Service&#x2F;Repo 职责分离
+
+
+控制反转(IoC)
+server 只调 app.handle，不碰业务
+
+
+单一职责(SRP)
+每个文件只做一件事
+
+
+依赖倒置
+上层依赖下层接口，不依赖实现
+
+
+开闭原则
+加新模块只需在 app.js 注册，不改核心
+
+
+防御性编程
+路径穿越校验、body 大小限制、token 防篡改
+
+
+元数据与文件分离
+元数据在 SQLite，本体在 uploads 目录
+
+
+全局错误边界
+所有异常统一转 500，不崩溃进程
+
+
+
+八、总结这个项目虽然规模不大，但完整地实践了：
+
+工程化落地：从需求分析、分层架构、到部署运维，全流程覆盖
+零依赖哲学：只用 Node 原生模块，避开构建工具和外部依赖的坑
+防御性编程：路径穿越、body 限制、token 防篡改等安全措施
+部署实战：解决了端口占用、动态 IP、中文编码等真实部署问题
+
+最有价值的不是代码本身，而是踩坑后沉淀的经验：
+
+后台服务要用 PID 文件管理进程，避免僵尸进程占端口
+内网 IP 是动态的，不要硬编码，要实时检测
+Windows 批处理文件的中文编码要与 cmd 代码页一致
+
+希望这篇博客对你有帮助。如果你也在做小组协作工具，欢迎交流！
+
+📦 项目地址
+GitHub：Filehub-4-Group
+
+
+欢迎 Star、Fork，也欢迎提 Issue 交流讨论。
+
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>文件共享</tag>
+        <tag>Node.js</tag>
+        <tag>全栈开发</tag>
+        <tag>系统设计</tag>
+        <tag>零依赖</tag>
+        <tag>SQLite</tag>
+        <tag>部署运维</tag>
+      </tags>
+  </entry>
+</search>
