@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://dr1ft0.github.io/2026/09/%E6%96%87%E4%BB%B6%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E4%B8%8E%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/</loc>
+    
+    <lastmod>2026-09-09</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://dr1ft0.github.io/2026/09/%E4%BB%8E%E9%9B%B6%E6%90%AD%E5%BB%BA%E4%B8%80%E4%B8%AA%E5%B0%8F%E7%BB%84%E8%84%9A%E6%9C%AC%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F/</loc>
     
     <lastmod>2026-09-09</lastmod>
@@ -218,6 +227,41 @@
   
   <url>
     <loc>https://dr1ft0.github.io/tags/%E9%83%A8%E7%BD%B2%E8%BF%90%E7%BB%B4/</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://dr1ft0.github.io/tags/SMB/</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://dr1ft0.github.io/tags/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://dr1ft0.github.io/tags/%E4%BC%81%E4%B8%9A%E7%BD%91%E7%9B%98/</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://dr1ft0.github.io/tags/%E5%AD%98%E5%82%A8/</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://dr1ft0.github.io/tags/%E6%9D%83%E9%99%90%E7%AE%A1%E7%90%86/</loc>
     <lastmod>2026-09-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
