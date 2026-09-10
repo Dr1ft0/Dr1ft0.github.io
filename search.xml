@@ -321,7 +321,7 @@ GitHub：Filehub-4-Group
     <title>文件共享平台重写实战：从&quot;人工共享&quot;到&quot;点击即共享&quot;</title>
     <url>/2026/09/%E6%96%87%E4%BB%B6%E5%85%B1%E4%BA%AB%E5%B9%B3%E5%8F%B0%E9%87%8D%E5%86%99%E5%AE%9E%E6%88%98/</url>
     <content><![CDATA[
-项目背景：公司内部文件共享管理平台（FileSharedPlatform）重写项目。核心目标：将”创建共享后还需人工到文件服务器运行脚本”的旧系统，重写为”点击即共享”的新系统。技术栈：.NET Core 8 + Vue 3 + SQL Server + SSH.NET。
+项目背景：企业内部文件共享管理平台重写项目。核心目标：将”创建共享后还需人工到文件服务器运行脚本”的旧系统，重写为”点击即共享”的新系统。技术栈：.NET Core 8 + Vue 3 + SQL Server + SSH.NET。
 
 
 一、为什么要重写：旧系统的核心缺陷旧系统是一个基于 ASP.NET Web Forms (.NET Framework 4.5) 的文件共享平台，核心逻辑全部在编译好的 DLL 中，没有源码。
@@ -386,7 +386,7 @@ Serilog
 
 关键决策：
 
-复用现有数据库（HIKVISIONFileShare_DB），保留现有表结构和存储过程，降低迁移风险
+复用现有数据库，保留现有表结构和存储过程，降低迁移风险
 通过 SSH.NET 远程执行共享命令，实现”点击即共享”
 完全独立部署，与旧系统并行运行，逐步迁移用户
 
@@ -400,49 +400,49 @@ Serilog
 
 
 
-FSS1
+文件服务器 A
 文件服务器 1
 共享根目录为 E 盘，已有 TB 量级共享目录
 
 
-FSS2
+文件服务器 B
 文件服务器 2
 有 D 盘和 F 盘，已有 TB 量级共享目录
 
 
-FSDB
 数据库服务器
-运行 SQL Server（HIKVISIONFileShare_DB）
+数据库服务器
+运行 SQL Server
 
 
-FSPLF1&#x2F;FSPLF2
+前端服务器 1&#x2F;2
 前端服务器
 部署 Vue 前端（Nginx 托管）
 
 
 关键约束：
 
-FSS1 和 FSS2 的共享根目录路径不同，需分别配置
+两台文件服务器的共享根目录路径不同，需分别配置
 数据是 TB 量级，不能重新复制，必须复用现有共享目录
 现有共享目录必须保持不变，不能影响现有业务
 新系统创建共享时，在各自的共享根目录下新建子文件夹
 
 
-五、核心实现：点击即共享5.1 创建共享流程用户点击&quot;创建共享&quot;    ↓Vue 前端 → POST /api/folder    ↓Web API → FolderService.CreateFolder()    ↓① 验证 Token② 检查参数（文件夹名、授权码、权限列表）③ 获取文件服务器（spAFSFS_GetFileServerForAccreditID）④ SSH 连接文件服务器，执行共享命令⑤ 插入文件夹记录（spSFFS_Insert）⑥ 插入权限记录（spFPFS_Insert）    ↓返回共享成功
+五、核心实现：点击即共享5.1 创建共享流程用户点击&quot;创建共享&quot;    ↓Vue 前端 → POST /api/folder    ↓Web API → FolderService.CreateFolder()    ↓① 验证 Token② 检查参数（文件夹名、授权码、权限列表）③ 获取文件服务器（查询授权码对应的文件服务器）④ SSH 连接文件服务器，执行共享命令⑤ 插入文件夹记录⑥ 插入权限记录    ↓返回共享成功
 
 5.2 文件服务器共享命令创建共享（在共享根目录下新建子文件夹）：
-# 1. 创建本地目录mkdir &quot;E:\共享文件夹名&quot;# 2. 创建共享（共享名 = 文件夹名）net share &quot;共享文件夹名&quot;=E:\共享文件夹名 /grant:everyone,READ# 3. 设置 NTFS 权限（编辑者：修改；只读者：读取）icacls &quot;E:\共享文件夹名&quot; /grant &quot;DOMAIN\编辑者账号:(OI)(CI)M&quot;icacls &quot;E:\共享文件夹名&quot; /grant &quot;DOMAIN\只读者账号:(OI)(CI)R&quot;
+# 1. 创建本地目录mkdir &quot;D:\共享根目录\共享文件夹名&quot;# 2. 创建共享（共享名 = 文件夹名）net share &quot;共享文件夹名&quot;=D:\共享根目录\共享文件夹名 /grant:everyone,READ# 3. 设置 NTFS 权限（编辑者：修改；只读者：读取）icacls &quot;D:\共享根目录\共享文件夹名&quot; /grant &quot;域\编辑者账号:(OI)(CI)M&quot;icacls &quot;D:\共享根目录\共享文件夹名&quot; /grant &quot;域\只读者账号:(OI)(CI)R&quot;
 
 删除共享：
-net share &quot;共享文件夹名&quot; /deletermdir /s /q &quot;E:\共享文件夹名&quot;
+net share &quot;共享文件夹名&quot; /deletermdir /s /q &quot;D:\共享根目录\共享文件夹名&quot;
 
 修改权限（支持修改旧共享）：
-icacls &quot;E:\共享文件夹名&quot; /reseticacls &quot;E:\共享文件夹名&quot; /grant &quot;DOMAIN\编辑者账号:(OI)(CI)M&quot;icacls &quot;E:\共享文件夹名&quot; /grant &quot;DOMAIN\只读者账号:(OI)(CI)R&quot;
+icacls &quot;D:\共享根目录\共享文件夹名&quot; /reseticacls &quot;D:\共享根目录\共享文件夹名&quot; /grant &quot;域\编辑者账号:(OI)(CI)M&quot;icacls &quot;D:\共享根目录\共享文件夹名&quot; /grant &quot;域\只读者账号:(OI)(CI)R&quot;
 
 
 六、安全设计6.1 SSH 安全
 密钥认证：禁用密码登录，只允许密钥认证
-专用账号：创建专用账号（如 shareadmin），加入本地管理员组（因为 net share、icacls 需要管理员权限）
+专用账号：创建专用账号，加入本地管理员组（因为 net share、icacls 需要管理员权限）
 防火墙限制：只允许后端服务器 IP 访问 22 端口
 命令白名单：后端只执行预定义的共享命令，不执行任意命令
 
@@ -459,7 +459,7 @@ SQL 注入防护：使用 Dapper 参数化查询
 使用 Kestrel + Nginx 反向代理 或 IIS 托管
 
 7.3 前端部署
-构建 Vue 3 前端，部署到 FSPLF1、FSPLF2（Nginx 托管）
+构建 Vue 3 前端，部署到前端服务器（Nginx 托管）
 配置 Nginx 反向代理 /api/ 到后端 API
 
 
@@ -509,7 +509,7 @@ SSH 账号必须是管理员：net share、icacls、rmdir /s 都需要管理员�
 权限继承：icacls 设置权限时需注意权限继承关系
 回滚机制：如果数据库操作失败，需要回滚文件服务器上的共享操作
 并发控制：多个用户同时创建共享时，需防止共享名冲突
-FSS1&#x2F;FSS2 差异：两台文件服务器的共享根目录路径不同，需分别配置
+多文件服务器差异：不同文件服务器的共享根目录路径不同，需分别配置
 命令注入防护：文件夹名必须白名单校验，防止恶意命令注入
 
 
@@ -986,6 +986,179 @@ curl -s -X POST &quot;https://oapi.dingtalk.com/robot/send?access_token=$DING_TO
         <tag>自动化运维</tag>
         <tag>备份</tag>
         <tag>监控</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>「脚本仙人」系统开发总结</title>
+    <url>/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[
+项目定位：小组文件&#x2F;脚本共享系统，支持版本管理、简介搜索、排序筛选、成员共享、管理员权限。技术栈：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。架构：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。
+
+
+一、系统概览核心能力
+
+
+能力
+说明
+
+
+
+用户认证
+scrypt 密码哈希、HMAC 签名 token、登录失败锁定
+
+
+文件管理
+上传&#x2F;下载&#x2F;预览&#x2F;重命名&#x2F;简介&#x2F;删除
+
+
+版本管理
+多版本、回滚、删除版本
+
+
+搜索筛选
+关键词（名称+简介）、上传者、后缀、排序
+
+
+共享协作
+公共文件、指定成员共享
+
+
+权限控制
+owner 优先，admin 拥有全部管理权
+
+
+架构分层graph LR
+    A[Router&lt;br/&gt;路由分发] --&gt; B[Controller&lt;br/&gt;请求处理]
+    B --&gt; C[Service&lt;br/&gt;业务逻辑]
+    C --&gt; D[Repo&lt;br/&gt;数据访问]
+    D --&gt; E[(SQLite)]
+
+四层分离的价值：每个新功能（简介、筛选、版本删除、共享）都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
+
+二、开发过程回顾阶段一：基础搭建
+零依赖架构：手写 multipart 解析、静态文件服务、token 签名
+SQLite 建表 + WAL 模式：保证并发读写
+
+阶段二：核心功能迭代按用户需求逐步叠加：
+graph LR
+    A[基础上传下载] --&gt; B[简介]
+    B --&gt; C[简介搜索]
+    C --&gt; D[排序]
+    D --&gt; E[上传者/后缀筛选]
+    E --&gt; F[&quot;其它筛选&quot;]
+    F --&gt; G[版本删除]
+    G --&gt; H[admin 权限]
+    H --&gt; I[成员共享]
+
+阶段三：部署与运维
+内网访问：局域网 IP + 防火墙
+上传 GitHub：版本管理
+性能与安全检测
+
+
+三、关键经验1. 分层架构的价值Router → Controller → Service → Repo 四层分离，让每个新功能都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
+2. 零依赖的取舍
+
+
+优点
+代价
+
+
+
+无供应链风险
+手写 multipart 解析
+
+
+部署简单（只需 Node 环境）
+手写 token 签名
+
+
+体积小
+手写静态服务
+
+
+
+需自行处理边界情况
+
+
+3. 数据库迁移策略用 PRAGMA table_info 检查列是否存在，再 ALTER TABLE 增量迁移，兼容旧数据库，避免破坏已有数据。
+-- 示例：检查列是否存在，不存在则添加PRAGMA table_info(files);-- 若缺少某列，则执行ALTER TABLE files ADD COLUMN description TEXT DEFAULT &#x27;&#x27;;
+
+4. 安全防护意识
+
+
+风险
+防护措施
+
+
+
+SQL 注入
+排序字段用白名单校验
+
+
+路径穿越
+文件名&#x2F;路径严格校验
+
+
+密码安全
+scrypt 加盐哈希
+
+
+登录爆破
+失败次数锁定
+
+
+
+四、踩过的坑与教训教训 1：前端内联传 JSON 导致属性损坏（最深刻）问题：共享按钮 onclick 内联传入 JSON.stringify(sharedWith)，当含双引号时提前终止 HTML 属性，导致按钮无法点击、无法覆盖共享。
+教训：不要在 HTML 属性内联传复杂 JSON。应只传 id，从数据源（全局缓存&#x2F;接口）读取。这是本次最典型的”看似简单实则致命”的 bug。
+&lt;!-- ❌ 错误：内联传 JSON，双引号会破坏属性 --&gt;&lt;button onclick=&quot;share(&#123;&#123; JSON.stringify(sharedWith) &#125;&#125;)&quot;&gt;共享&lt;/button&gt;&lt;!-- ✅ 正确：只传 id，从数据源读取 --&gt;&lt;button onclick=&quot;share(fileId)&quot;&gt;共享&lt;/button&gt;
+
+教训 2：API 路径前缀重复问题：api(&#39;/api/users&#39;) 因 api() 已自动加 /api 前缀，导致双重前缀 404。
+教训：封装统一请求函数时，调用方必须清楚前缀规则，避免重复拼接。
+// ❌ 错误：api() 已自动加 /api，这里又写了一遍api(&#x27;/api/users&#x27;)// ✅ 正确：只写相对路径api(&#x27;/users&#x27;)
+
+教训 3：cmd 批处理语法陷阱问题：测试登录锁定时，cmd 的 for 循环报”此时不应有 i”。
+教训：复杂逻辑用 Node 脚本而非 cmd 批处理，跨平台更可靠。
+教训 4：Git 远程冲突问题：GitHub 网页端修改 README 后，本地 push 被拒。
+教训：多人&#x2F;多端协作时，push 前先 pull --allow-unrelated-histories 合并。
+git pull origin main --allow-unrelated-historiesgit push origin main
+
+教训 5：删除操作的边界保护问题：删除最后一个版本时返回 500。
+教训：删除类操作必须考虑边界条件（至少保留一个版本），并在 service 层捕获转换为友好错误。
+// 至少保留一个版本if (versions.length &lt;= 1) &#123;  throw new Error(&#x27;至少保留一个版本，无法删除&#x27;);&#125;
+
+教训 6：测试污染生产数据问题：测试过程中 admin 账号被锁定、testmember 残留。
+教训：测试应使用独立数据或测试账号，避免污染生产数据；测试后需清理。
+
+五、总体心得
+小步快跑：每个需求独立迭代、独立测试、独立提交，问题定位快。
+前后端联动：功能改动需同时考虑前端展示与后端逻辑，尤其注意数据传递方式（内联 vs 接口）。
+权限模型要统一：owner 优先 + admin 兜底，通过 _requireOwner &#x2F; _canRead 集中管理，避免散落各处。
+边界与异常：删除、空数据、非法输入都要有兜底，避免 500。
+版本管理：Git 提交记录清晰，每个功能一个 commit，便于回溯。
+
+
+
+总结：这个系统从零到一，经历了功能叠加、bug 修复、部署上线、GitHub 托管，是一个完整且典型的全栈小项目实践。它教会我的不仅是技术，更是如何用分层架构应对快速迭代、如何用安全意识规避常见风险、如何从踩坑中沉淀方法论。
+
+
+📦 项目地址
+GitHub：Filehub-4-Group
+
+
+欢迎 Star、Fork，也欢迎提 Issue 交流讨论。
+
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Node.js</tag>
+        <tag>全栈开发</tag>
+        <tag>系统设计</tag>
+        <tag>零依赖</tag>
+        <tag>SQLite</tag>
+        <tag>文件共享</tag>
       </tags>
   </entry>
   <entry>
@@ -2116,179 +2289,6 @@ Web 服务不可用
       <tags>
         <tag>故障排查</tag>
         <tag>运维</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>「脚本仙人」系统开发总结</title>
-    <url>/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/</url>
-    <content><![CDATA[
-项目定位：小组文件&#x2F;脚本共享系统，支持版本管理、简介搜索、排序筛选、成员共享、管理员权限。技术栈：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。架构：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。
-
-
-一、系统概览核心能力
-
-
-能力
-说明
-
-
-
-用户认证
-scrypt 密码哈希、HMAC 签名 token、登录失败锁定
-
-
-文件管理
-上传&#x2F;下载&#x2F;预览&#x2F;重命名&#x2F;简介&#x2F;删除
-
-
-版本管理
-多版本、回滚、删除版本
-
-
-搜索筛选
-关键词（名称+简介）、上传者、后缀、排序
-
-
-共享协作
-公共文件、指定成员共享
-
-
-权限控制
-owner 优先，admin 拥有全部管理权
-
-
-架构分层graph LR
-    A[Router&lt;br/&gt;路由分发] --&gt; B[Controller&lt;br/&gt;请求处理]
-    B --&gt; C[Service&lt;br/&gt;业务逻辑]
-    C --&gt; D[Repo&lt;br/&gt;数据访问]
-    D --&gt; E[(SQLite)]
-
-四层分离的价值：每个新功能（简介、筛选、版本删除、共享）都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
-
-二、开发过程回顾阶段一：基础搭建
-零依赖架构：手写 multipart 解析、静态文件服务、token 签名
-SQLite 建表 + WAL 模式：保证并发读写
-
-阶段二：核心功能迭代按用户需求逐步叠加：
-graph LR
-    A[基础上传下载] --&gt; B[简介]
-    B --&gt; C[简介搜索]
-    C --&gt; D[排序]
-    D --&gt; E[上传者/后缀筛选]
-    E --&gt; F[&quot;其它筛选&quot;]
-    F --&gt; G[版本删除]
-    G --&gt; H[admin 权限]
-    H --&gt; I[成员共享]
-
-阶段三：部署与运维
-内网访问：局域网 IP + 防火墙
-上传 GitHub：版本管理
-性能与安全检测
-
-
-三、关键经验1. 分层架构的价值Router → Controller → Service → Repo 四层分离，让每个新功能都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
-2. 零依赖的取舍
-
-
-优点
-代价
-
-
-
-无供应链风险
-手写 multipart 解析
-
-
-部署简单（只需 Node 环境）
-手写 token 签名
-
-
-体积小
-手写静态服务
-
-
-
-需自行处理边界情况
-
-
-3. 数据库迁移策略用 PRAGMA table_info 检查列是否存在，再 ALTER TABLE 增量迁移，兼容旧数据库，避免破坏已有数据。
--- 示例：检查列是否存在，不存在则添加PRAGMA table_info(files);-- 若缺少某列，则执行ALTER TABLE files ADD COLUMN description TEXT DEFAULT &#x27;&#x27;;
-
-4. 安全防护意识
-
-
-风险
-防护措施
-
-
-
-SQL 注入
-排序字段用白名单校验
-
-
-路径穿越
-文件名&#x2F;路径严格校验
-
-
-密码安全
-scrypt 加盐哈希
-
-
-登录爆破
-失败次数锁定
-
-
-
-四、踩过的坑与教训教训 1：前端内联传 JSON 导致属性损坏（最深刻）问题：共享按钮 onclick 内联传入 JSON.stringify(sharedWith)，当含双引号时提前终止 HTML 属性，导致按钮无法点击、无法覆盖共享。
-教训：不要在 HTML 属性内联传复杂 JSON。应只传 id，从数据源（全局缓存&#x2F;接口）读取。这是本次最典型的”看似简单实则致命”的 bug。
-&lt;!-- ❌ 错误：内联传 JSON，双引号会破坏属性 --&gt;&lt;button onclick=&quot;share(&#123;&#123; JSON.stringify(sharedWith) &#125;&#125;)&quot;&gt;共享&lt;/button&gt;&lt;!-- ✅ 正确：只传 id，从数据源读取 --&gt;&lt;button onclick=&quot;share(fileId)&quot;&gt;共享&lt;/button&gt;
-
-教训 2：API 路径前缀重复问题：api(&#39;/api/users&#39;) 因 api() 已自动加 /api 前缀，导致双重前缀 404。
-教训：封装统一请求函数时，调用方必须清楚前缀规则，避免重复拼接。
-// ❌ 错误：api() 已自动加 /api，这里又写了一遍api(&#x27;/api/users&#x27;)// ✅ 正确：只写相对路径api(&#x27;/users&#x27;)
-
-教训 3：cmd 批处理语法陷阱问题：测试登录锁定时，cmd 的 for 循环报”此时不应有 i”。
-教训：复杂逻辑用 Node 脚本而非 cmd 批处理，跨平台更可靠。
-教训 4：Git 远程冲突问题：GitHub 网页端修改 README 后，本地 push 被拒。
-教训：多人&#x2F;多端协作时，push 前先 pull --allow-unrelated-histories 合并。
-git pull origin main --allow-unrelated-historiesgit push origin main
-
-教训 5：删除操作的边界保护问题：删除最后一个版本时返回 500。
-教训：删除类操作必须考虑边界条件（至少保留一个版本），并在 service 层捕获转换为友好错误。
-// 至少保留一个版本if (versions.length &lt;= 1) &#123;  throw new Error(&#x27;至少保留一个版本，无法删除&#x27;);&#125;
-
-教训 6：测试污染生产数据问题：测试过程中 admin 账号被锁定、testmember 残留。
-教训：测试应使用独立数据或测试账号，避免污染生产数据；测试后需清理。
-
-五、总体心得
-小步快跑：每个需求独立迭代、独立测试、独立提交，问题定位快。
-前后端联动：功能改动需同时考虑前端展示与后端逻辑，尤其注意数据传递方式（内联 vs 接口）。
-权限模型要统一：owner 优先 + admin 兜底，通过 _requireOwner &#x2F; _canRead 集中管理，避免散落各处。
-边界与异常：删除、空数据、非法输入都要有兜底，避免 500。
-版本管理：Git 提交记录清晰，每个功能一个 commit，便于回溯。
-
-
-
-总结：这个系统从零到一，经历了功能叠加、bug 修复、部署上线、GitHub 托管，是一个完整且典型的全栈小项目实践。它教会我的不仅是技术，更是如何用分层架构应对快速迭代、如何用安全意识规避常见风险、如何从踩坑中沉淀方法论。
-
-
-📦 项目地址
-GitHub：Filehub-4-Group
-
-
-欢迎 Star、Fork，也欢迎提 Issue 交流讨论。
-
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-      </categories>
-      <tags>
-        <tag>Node.js</tag>
-        <tag>全栈开发</tag>
-        <tag>系统设计</tag>
-        <tag>零依赖</tag>
-        <tag>SQLite</tag>
-        <tag>文件共享</tag>
       </tags>
   </entry>
 </search>
