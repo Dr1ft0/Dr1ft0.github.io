@@ -777,179 +777,6 @@ curl -s -X POST &quot;https://oapi.dingtalk.com/robot/send?access_token=$DING_TO
       </tags>
   </entry>
   <entry>
-    <title>「脚本仙人」系统开发总结</title>
-    <url>/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/</url>
-    <content><![CDATA[
-项目定位：小组文件&#x2F;脚本共享系统，支持版本管理、简介搜索、排序筛选、成员共享、管理员权限。技术栈：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。架构：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。
-
-
-一、系统概览核心能力
-
-
-能力
-说明
-
-
-
-用户认证
-scrypt 密码哈希、HMAC 签名 token、登录失败锁定
-
-
-文件管理
-上传&#x2F;下载&#x2F;预览&#x2F;重命名&#x2F;简介&#x2F;删除
-
-
-版本管理
-多版本、回滚、删除版本
-
-
-搜索筛选
-关键词（名称+简介）、上传者、后缀、排序
-
-
-共享协作
-公共文件、指定成员共享
-
-
-权限控制
-owner 优先，admin 拥有全部管理权
-
-
-架构分层graph LR
-    A[Router&lt;br/&gt;路由分发] --&gt; B[Controller&lt;br/&gt;请求处理]
-    B --&gt; C[Service&lt;br/&gt;业务逻辑]
-    C --&gt; D[Repo&lt;br/&gt;数据访问]
-    D --&gt; E[(SQLite)]
-
-四层分离的价值：每个新功能（简介、筛选、版本删除、共享）都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
-
-二、开发过程回顾阶段一：基础搭建
-零依赖架构：手写 multipart 解析、静态文件服务、token 签名
-SQLite 建表 + WAL 模式：保证并发读写
-
-阶段二：核心功能迭代按用户需求逐步叠加：
-graph LR
-    A[基础上传下载] --&gt; B[简介]
-    B --&gt; C[简介搜索]
-    C --&gt; D[排序]
-    D --&gt; E[上传者/后缀筛选]
-    E --&gt; F[&quot;其它筛选&quot;]
-    F --&gt; G[版本删除]
-    G --&gt; H[admin 权限]
-    H --&gt; I[成员共享]
-
-阶段三：部署与运维
-内网访问：局域网 IP + 防火墙
-上传 GitHub：版本管理
-性能与安全检测
-
-
-三、关键经验1. 分层架构的价值Router → Controller → Service → Repo 四层分离，让每个新功能都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
-2. 零依赖的取舍
-
-
-优点
-代价
-
-
-
-无供应链风险
-手写 multipart 解析
-
-
-部署简单（只需 Node 环境）
-手写 token 签名
-
-
-体积小
-手写静态服务
-
-
-
-需自行处理边界情况
-
-
-3. 数据库迁移策略用 PRAGMA table_info 检查列是否存在，再 ALTER TABLE 增量迁移，兼容旧数据库，避免破坏已有数据。
--- 示例：检查列是否存在，不存在则添加PRAGMA table_info(files);-- 若缺少某列，则执行ALTER TABLE files ADD COLUMN description TEXT DEFAULT &#x27;&#x27;;
-
-4. 安全防护意识
-
-
-风险
-防护措施
-
-
-
-SQL 注入
-排序字段用白名单校验
-
-
-路径穿越
-文件名&#x2F;路径严格校验
-
-
-密码安全
-scrypt 加盐哈希
-
-
-登录爆破
-失败次数锁定
-
-
-
-四、踩过的坑与教训教训 1：前端内联传 JSON 导致属性损坏（最深刻）问题：共享按钮 onclick 内联传入 JSON.stringify(sharedWith)，当含双引号时提前终止 HTML 属性，导致按钮无法点击、无法覆盖共享。
-教训：不要在 HTML 属性内联传复杂 JSON。应只传 id，从数据源（全局缓存&#x2F;接口）读取。这是本次最典型的”看似简单实则致命”的 bug。
-&lt;!-- ❌ 错误：内联传 JSON，双引号会破坏属性 --&gt;&lt;button onclick=&quot;share(&#123;&#123; JSON.stringify(sharedWith) &#125;&#125;)&quot;&gt;共享&lt;/button&gt;&lt;!-- ✅ 正确：只传 id，从数据源读取 --&gt;&lt;button onclick=&quot;share(fileId)&quot;&gt;共享&lt;/button&gt;
-
-教训 2：API 路径前缀重复问题：api(&#39;/api/users&#39;) 因 api() 已自动加 /api 前缀，导致双重前缀 404。
-教训：封装统一请求函数时，调用方必须清楚前缀规则，避免重复拼接。
-// ❌ 错误：api() 已自动加 /api，这里又写了一遍api(&#x27;/api/users&#x27;)// ✅ 正确：只写相对路径api(&#x27;/users&#x27;)
-
-教训 3：cmd 批处理语法陷阱问题：测试登录锁定时，cmd 的 for 循环报”此时不应有 i”。
-教训：复杂逻辑用 Node 脚本而非 cmd 批处理，跨平台更可靠。
-教训 4：Git 远程冲突问题：GitHub 网页端修改 README 后，本地 push 被拒。
-教训：多人&#x2F;多端协作时，push 前先 pull --allow-unrelated-histories 合并。
-git pull origin main --allow-unrelated-historiesgit push origin main
-
-教训 5：删除操作的边界保护问题：删除最后一个版本时返回 500。
-教训：删除类操作必须考虑边界条件（至少保留一个版本），并在 service 层捕获转换为友好错误。
-// 至少保留一个版本if (versions.length &lt;= 1) &#123;  throw new Error(&#x27;至少保留一个版本，无法删除&#x27;);&#125;
-
-教训 6：测试污染生产数据问题：测试过程中 admin 账号被锁定、testmember 残留。
-教训：测试应使用独立数据或测试账号，避免污染生产数据；测试后需清理。
-
-五、总体心得
-小步快跑：每个需求独立迭代、独立测试、独立提交，问题定位快。
-前后端联动：功能改动需同时考虑前端展示与后端逻辑，尤其注意数据传递方式（内联 vs 接口）。
-权限模型要统一：owner 优先 + admin 兜底，通过 _requireOwner &#x2F; _canRead 集中管理，避免散落各处。
-边界与异常：删除、空数据、非法输入都要有兜底，避免 500。
-版本管理：Git 提交记录清晰，每个功能一个 commit，便于回溯。
-
-
-
-总结：这个系统从零到一，经历了功能叠加、bug 修复、部署上线、GitHub 托管，是一个完整且典型的全栈小项目实践。它教会我的不仅是技术，更是如何用分层架构应对快速迭代、如何用安全意识规避常见风险、如何从踩坑中沉淀方法论。
-
-
-📦 项目地址
-GitHub：Filehub-4-Group
-
-
-欢迎 Star、Fork，也欢迎提 Issue 交流讨论。
-
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-      </categories>
-      <tags>
-        <tag>Node.js</tag>
-        <tag>全栈开发</tag>
-        <tag>系统设计</tag>
-        <tag>零依赖</tag>
-        <tag>SQLite</tag>
-        <tag>文件共享</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>文件资源共享系统底层原理与协议详解</title>
     <url>/2026/09/%E6%96%87%E4%BB%B6%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%AB%E7%B3%BB%E7%BB%9F%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E4%B8%8E%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/</url>
     <content><![CDATA[
@@ -1777,6 +1604,1074 @@ OpLock&#x2F;Lease
         <tag>企业网盘</tag>
         <tag>存储</tag>
         <tag>权限管理</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>文件共享平台 · 系统整体架构</title>
+    <url>/2026/09/%E7%B3%BB%E7%BB%9F%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84/</url>
+    <content><![CDATA[文件共享平台 · 系统整体架构
+本文档描述新系统（.NET 8 Web API + Vue 3 SPA）的整体架构、分层职责、核心链路与各框架的可视化关系。
+
+
+〇、脱敏声明本文档不包含任何真实的生产敏感信息。以下内容一律使用占位符表示：
+
+
+
+占位符
+含义
+
+
+
+&lt;DB_HOST&gt;
+数据库服务器地址
+
+
+&lt;DB_NAME&gt;
+数据库实例名
+
+
+&lt;DB_USER&gt; &#x2F; &lt;DB_PASSWORD&gt;
+数据库账号 &#x2F; 口令
+
+
+&lt;FSS_IP&gt;
+文件服务器地址
+
+
+&lt;SSH_USER&gt;
+SSH 专用账号
+
+
+&lt;KEY_PATH&gt;
+SSH 私钥文件路径
+
+
+&lt;JWT_SECRET&gt;
+JWT 签名密钥
+
+
+&lt;LEGACY_DES_KEY&gt;
+旧系统 DES 密钥
+
+
+
+真实值请通过安全配置管理（密钥保管、环境变量、受控配置文件）维护，不要写入任何纳入版本管理的文档。
+
+
+一、系统定位企业内部的文件共享管理平台：管理员通过 Web 界面登记、授权、管理文件服务器上的共享文件夹（增删改查 + 续期 + 日志）。
+新旧系统核心差异
+
+
+维度
+旧系统
+新系统
+
+
+
+技术栈
+ASP.NET Web Forms (.NET Framework 4.5)
+.NET 8 Web API + Vue 3 SPA
+
+
+核心逻辑
+全部编译在 DLL 中，无源码
+完全开源、分层清晰
+
+
+与文件服务器联动
+无，只写数据库
+有，SSH 远程执行共享命令
+
+
+共享生效方式
+人工上文件服务器跑脚本
+点击即共享，全自动
+
+
+前端交互
+HTML + jQuery + AJAX（整页&#x2F;半页刷新）
+SPA 单页应用、组件化
+
+
+flowchart LR
+    subgraph OLD[&quot;旧系统（缺陷）&quot;]
+        direction TB
+        O1[&quot;Web 界面登记&quot;] --&gt; O2[&quot;只写数据库&quot;]
+        O2 --&gt; O3[&quot;人工到文件服务器&lt;br/&gt;执行 net share / icacls&quot;]
+        O3 --&gt; O4[&quot;共享真正生效&quot;]
+    end
+    subgraph NEW[&quot;新系统（目标）&quot;]
+        direction TB
+        N1[&quot;Web 界面登记&quot;] --&gt; N2[&quot;写数据库&quot;]
+        N2 --&gt; N3[&quot;后端经 SSH 自动执行&lt;br/&gt;mkdir / net share / icacls&quot;]
+        N3 --&gt; N4[&quot;共享立即生效&quot;]
+    end
+
+
+二、总体架构图flowchart TB
+    subgraph UL[&quot;用户层&quot;]
+        BR[&quot;浏览器&quot;]
+    end
+
+    subgraph FEL[&quot;前端层 · Vue 3 SPA&quot;]
+        UI[&quot;Element Plus 组件库&quot;]
+        RT[&quot;Vue Router 路由&quot;]
+        ST[&quot;Pinia 状态&quot;]
+        AX[&quot;Axios HTTP 客户端&quot;]
+    end
+
+    subgraph BEL[&quot;后端层 · .NET 8 Web API&quot;]
+        CT[&quot;Controllers 表现层&quot;]
+        SV[&quot;Services 业务层&quot;]
+        RS[&quot;Repositories 数据访问层&quot;]
+        IF[&quot;Infrastructure 基础设施&quot;]
+    end
+
+    subgraph DAL[&quot;数据与外部系统&quot;]
+        DB[(&quot;SQL Server&quot;)]
+        FS[&quot;文件服务器&quot;]
+        AD[&quot;AD 域控&quot;]
+    end
+
+    BR --&gt; UI
+    UI --&gt; RT
+    UI --&gt; ST
+    UI --&gt; AX
+    AX --&gt;|&quot;HTTP /api&quot;| CT
+    CT --&gt; SV
+    SV --&gt; RS
+    SV --&gt; IF
+    RS --&gt;|&quot;Dapper + 存储过程&quot;| DB
+    IF --&gt;|&quot;SSH.NET 密钥认证&quot;| FS
+    IF -.-&gt;|&quot;AD 验证（待确认）&quot;| AD
+
+
+三、部署架构flowchart TB
+    U[&quot;用户浏览器&quot;]
+
+    subgraph FSPLF[&quot;前端服务器 1（主）&quot;]
+        NG1[&quot;Nginx&lt;br/&gt;静态资源 + /api 反向代理&quot;]
+        AP1[&quot;后端 API&lt;br/&gt;仅监听 127.0.0.1:5000&quot;]
+    end
+
+    subgraph FSPLF2[&quot;前端服务器 2（备）&quot;]
+        NG2[&quot;Nginx&lt;br/&gt;静态资源&quot;]
+        AP2[&quot;后端 API（可选高可用）&quot;]
+    end
+
+    DB[(&quot;数据库服务器&lt;br/&gt;SQL Server&quot;)]
+
+    subgraph FSS[&quot;文件服务器组&quot;]
+        FSS1[&quot;文件服务器 A&lt;br/&gt;共享根目录 E 盘&quot;]
+        FSS2[&quot;文件服务器 B&lt;br/&gt;共享根目录 D 盘 / F 盘&quot;]
+    end
+
+    U --&gt;|&quot;HTTP&quot;| NG1
+    U --&gt;|&quot;HTTP&quot;| NG2
+    NG1 --&gt;|&quot;127.0.0.1:5000&quot;| AP1
+    NG2 --&gt;|&quot;127.0.0.1:5000&quot;| AP2
+    AP1 --&gt;|&quot;TCP 1433&quot;| DB
+    AP2 -.-&gt;|&quot;可选&quot;| DB
+    AP1 --&gt;|&quot;SSH 22（防火墙限源）&quot;| FSS1
+    AP1 --&gt;|&quot;SSH 22（防火墙限源）&quot;| FSS2
+
+要点
+
+后端只监听回环地址，由 Nginx 对外，避免 API 直接暴露。
+文件服务器 22 端口仅放行后端服务器来源 IP。
+共享根目录按文件服务器分别配置（文件服务器 A 与 B 不同）。
+
+
+四、前端框架架构4.1 框架清单
+
+
+框架 &#x2F; 库
+版本
+职责
+
+
+
+Vue 3
+^3.5.6
+视图层框架、组合式 API
+
+
+Vue Router
+^4.4.5
+前端路由（history 模式）+ 登录守卫
+
+
+Pinia
+^2.2.2
+全局状态（登录态）
+
+
+Element Plus
+^2.8.4
+UI 组件库（中文 locale）
+
+
+Axios
+^1.7.7
+HTTP 客户端 + 请求&#x2F;响应拦截器
+
+
+Vite
+^5.4.6
+开发服务器（含 /api 代理）+ 构建
+
+
+@vitejs&#x2F;plugin-vue
+^5.1.4
+Vite 的 Vue SFC 编译插件
+
+
+4.2 应用启动与组件树flowchart TD
+    IDX[&quot;index.html #app&quot;] --&gt; MAIN[&quot;main.js&lt;br/&gt;createApp(App)&quot;]
+    MAIN --&gt; P1[&quot;use(createPinia())&quot;]
+    MAIN --&gt; P2[&quot;use(router)&quot;]
+    MAIN --&gt; P3[&quot;use(ElementPlus, zhCn)&quot;]
+    MAIN --&gt; APP[&quot;App.vue 根组件&quot;]
+    APP --&gt; RV[&quot;router-view&quot;]
+    RV --&gt; LOGIN[&quot;Login.vue&quot;]
+    RV --&gt; LAYOUT[&quot;MainLayout.vue&quot;]
+    LAYOUT --&gt; MENU[&quot;el-aside + el-menu&lt;br/&gt;侧边导航&quot;]
+    LAYOUT --&gt; HDR[&quot;el-header&lt;br/&gt;标题 + 用户下拉&quot;]
+    LAYOUT --&gt; BODY[&quot;el-main &gt; router-view&quot;]
+    BODY --&gt; V1[&quot;FolderList.vue&quot;]
+    BODY --&gt; V2[&quot;FolderCreate.vue&quot;]
+    BODY --&gt; V3[&quot;FolderDetail.vue&quot;]
+    BODY --&gt; V4[&quot;FolderServer.vue&quot;]
+    BODY --&gt; V5[&quot;Impower.vue&quot;]
+    BODY --&gt; V6[&quot;Space.vue&quot;]
+    BODY --&gt; V7[&quot;Log.vue&quot;]
+
+4.3 路由结构flowchart LR
+    RT[&quot;Vue Router&lt;br/&gt;createWebHistory&quot;] --&gt; R0[&quot;/login&lt;br/&gt;meta.public&quot;]
+    RT --&gt; R1[&quot;/  → 重定向 /folder&quot;]
+    R1 --&gt; C1[&quot;folder&quot;]
+    R1 --&gt; C2[&quot;folder/create&quot;]
+    R1 --&gt; C3[&quot;folder/:id&quot;]
+    R1 --&gt; C4[&quot;folder-server&quot;]
+    R1 --&gt; C5[&quot;impower&quot;]
+    R1 --&gt; C6[&quot;space&quot;]
+    R1 --&gt; C7[&quot;log&quot;]
+    G[&quot;beforeEach 全局守卫&quot;] -.-&gt;|&quot;无 token&quot;| R0
+
+4.4 Pinia 登录态流转stateDiagram-v2
+    [*] --&gt; LoggedOut
+    LoggedOut --&gt; LoggedIn : setLogin(token, user)
+    LoggedIn --&gt; LoggedOut : logout()
+    note right of LoggedIn
+        state: token / user
+        getters: isLoggedIn / isAdmin
+        持久化: localStorage
+    end note
+
+4.5 Axios 请求生命周期sequenceDiagram
+    autonumber
+    participant C as 页面组件
+    participant AX as Axios 实例（baseURL=/api）
+    participant RI as 请求拦截器
+    participant SRV as 后端 API
+    participant RS as 响应拦截器
+
+    C-&gt;&gt;AX: request.get / post / put / delete
+    AX-&gt;&gt;RI: 注入 Authorization: Bearer token
+    RI-&gt;&gt;SRV: HTTP 请求
+    SRV--&gt;&gt;RS: &#123; code, message, data &#125;
+    alt code === 0
+        RS--&gt;&gt;C: 返回响应体
+    else code !== 0
+        RS--&gt;&gt;C: ElMessage 报错 + Promise.reject
+    end
+    note over RS: HTTP 401 → 清除 token 并跳转登录页
+
+4.6 Vite 开发与构建flowchart LR
+    DEV[&quot;npm run dev&lt;br/&gt;DevServer :5173&quot;] --&gt; PX[&quot;proxy: /api&quot;]
+    PX --&gt; BE[&quot;后端 API&lt;br/&gt;localhost:5000&quot;]
+    BLD[&quot;npm run build&quot;] --&gt; DIST[&quot;dist/ 静态资源&quot;]
+    DIST --&gt; NGX[&quot;Nginx 托管&lt;br/&gt;try_files → index.html&quot;]
+    NGX --&gt; PX2[&quot;location /api/ 反向代理&quot;]
+
+4.7 Element Plus 组件使用分布flowchart LR
+    EP[&quot;Element Plus&quot;] --&gt; A1[&quot;el-form / el-input / el-select&lt;br/&gt;表单与录入&quot;]
+    EP --&gt; A2[&quot;el-table / el-tag&lt;br/&gt;列表与状态标记&quot;]
+    EP --&gt; A3[&quot;el-card / el-descriptions&lt;br/&gt;信息卡片&quot;]
+    EP --&gt; A4[&quot;el-dialog / el-message-box&lt;br/&gt;弹窗与确认&quot;]
+    EP --&gt; A5[&quot;el-container / el-menu&lt;br/&gt;布局与导航&quot;]
+    EP --&gt; A6[&quot;el-tabs&lt;br/&gt;日志页签切换&quot;]
+    EP --&gt; A7[&quot;el-progress&lt;br/&gt;空间使用率&quot;]
+
+
+五、后端框架架构5.1 框架清单
+
+
+框架 &#x2F; 库
+版本
+职责
+
+
+
+.NET
+net8.0 (LTS)
+运行时与基础库
+
+
+ASP.NET Core Web API
+8.0
+HTTP 管道、路由、DI、模型绑定
+
+
+Dapper
+2.1.35
+轻量 ORM，调用存储过程
+
+
+Microsoft.Data.SqlClient
+5.2.1
+SQL Server 驱动
+
+
+SSH.NET (Renci.SshNet)
+2026.0.0
+SSH 远程执行共享命令
+
+
+Microsoft.AspNetCore.Authentication.JwtBearer
+8.0.8
+JWT 认证中间件
+
+
+System.IdentityModel.Tokens.Jwt
+8.0.1
+JWT 生成与校验
+
+
+Serilog.AspNetCore
+8.0.2
+结构化日志
+
+
+Swashbuckle.AspNetCore
+6.7.3
+Swagger &#x2F; OpenAPI 文档
+
+
+5.2 分层架构与依赖方向flowchart TB
+    subgraph L1[&quot;表现层 · Controllers&quot;]
+        direction LR
+        CT1[&quot;AuthController&quot;]
+        CT2[&quot;FolderController&quot;]
+        CT3[&quot;FolderServerController&quot;]
+        CT4[&quot;ImpowerController&quot;]
+        CT5[&quot;SpaceController&quot;]
+        CT6[&quot;LogController&quot;]
+    end
+
+    subgraph L2[&quot;业务层 · Services&quot;]
+        direction LR
+        SV1[&quot;AuthService&quot;]
+        SV2[&quot;FolderService&quot;]
+        SV3[&quot;FolderServerService&quot;]
+        SV4[&quot;ImpowerService&quot;]
+        SV5[&quot;SpaceService&quot;]
+        SV6[&quot;LogService&quot;]
+        SV7[&quot;ShareService&quot;]
+    end
+
+    subgraph L3[&quot;数据访问层 · Repositories&quot;]
+        direction LR
+        RP0[&quot;BaseRepository&quot;]
+        RP1[&quot;LoginRepository&quot;]
+        RP2[&quot;TokenRepository&quot;]
+        RP3[&quot;FolderRepository&quot;]
+        RP4[&quot;FolderServerRepository&quot;]
+        RP5[&quot;ImpowerRepository&quot;]
+        RP6[&quot;SpaceRepository&quot;]
+        RP7[&quot;LogRepository&quot;]
+    end
+
+    subgraph L4[&quot;基础设施 · Infrastructure&quot;]
+        direction LR
+        IF1[&quot;CryptoService&quot;]
+        IF2[&quot;JwtTokenService&quot;]
+        IF3[&quot;SshClientFactory&quot;]
+        IF4[&quot;ShareCommandBuilder&quot;]
+        IF5[&quot;BusinessException&quot;]
+    end
+
+    L1 --&gt; L2
+    L2 --&gt; L3
+    L2 --&gt; L4
+    L3 --&gt; DB[(&quot;SQL Server&quot;)]
+    L4 --&gt; FS[&quot;文件服务器&quot;]
+
+5.3 依赖注入关系classDiagram
+    class FolderController &#123;
+        +CreateFolder(request)
+        +QueryFolders(account, fileServerId)
+        +GetFolder(id)
+        +UpdateFolder(id, request)
+        +DeleteFolder(id, request)
+        +RenewalFolder(id, request)
+    &#125;
+    class FolderService &#123;
+        +CreateFolderAsync(request)
+        +UpdateFolderAsync(id, request)
+        +DeleteFolderAsync(id, request)
+        +RenewalFolderAsync(id, request)
+    &#125;
+    class ShareService &#123;
+        +ValidateFolderName(name)
+        +CreateShareAsync(...)
+        +ModifySharePermissionsAsync(...)
+        +DeleteShareAsync(...)
+        +GetShareListAsync(...)
+    &#125;
+    class FolderRepository
+    class FolderServerRepository
+    class SshClientFactory
+    class ShareCommandBuilder
+    class CryptoService
+    class JwtTokenService
+
+    FolderController --&gt; FolderService
+    FolderService --&gt; FolderRepository
+    FolderService --&gt; FolderServerRepository
+    FolderService --&gt; ShareService
+    ShareService --&gt; SshClientFactory
+    ShareService --&gt; ShareCommandBuilder
+    SshClientFactory --&gt; CryptoService
+    JwtTokenService --&gt; CryptoService
+
+
+生命周期：CryptoService &#x2F; JwtTokenService &#x2F; SshClientFactory &#x2F; ShareCommandBuilder 为 Singleton；Repositories 与 Services 均为 Scoped。
+
+5.4 ASP.NET Core 请求管道flowchart TD
+    REQ[&quot;HTTP 请求&quot;] --&gt; M1[&quot;UseSwagger / UseSwaggerUI&lt;br/&gt;（仅 Development）&quot;]
+    M1 --&gt; M2[&quot;UseCors&lt;br/&gt;AllowFrontend 策略&quot;]
+    M2 --&gt; M3[&quot;UseAuthentication&lt;br/&gt;JWT 校验&quot;]
+    M3 --&gt; M4[&quot;UseAuthorization&lt;br/&gt;[Authorize]&quot;]
+    M4 --&gt; M5[&quot;MapControllers&lt;br/&gt;路由到控制器&quot;]
+    M5 --&gt; M6[&quot;UseExceptionHandler&lt;br/&gt;全局异常（当前注册在末端）&quot;]
+    M6 --&gt; RES[&quot;HTTP 响应&quot;]
+
+
+⚠️ 图中 UseExceptionHandler 位于 MapControllers 之后，按中间件顺序它无法捕获控制器抛出的异常，属于待修缺陷（见附录）。
+
+5.5 认证与令牌生命周期sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant AC as AuthController
+    participant AS as AuthService
+    participant LR as LoginRepository
+    participant JT as JwtTokenService
+    participant TR as TokenRepository
+    participant DB as SQL Server
+
+    U-&gt;&gt;AC: POST /api/auth/login
+    AC-&gt;&gt;AS: LoginAsync(account, password, loginType)
+    AS-&gt;&gt;AS: 口令加密处理
+    AS-&gt;&gt;LR: AdminLoginAsync / UserCheckAsync
+    LR-&gt;&gt;DB: 管理员登录 / 用户校验存储过程
+    DB--&gt;&gt;LR: 用户信息
+    AS-&gt;&gt;JT: GenerateToken(id, name, role, account)
+    JT--&gt;&gt;AS: JWT（HMAC-SHA256）
+    AS-&gt;&gt;TR: CreateTokenAsync(account, jwt)
+    TR-&gt;&gt;DB: 创建令牌存储过程
+    AS--&gt;&gt;AC: LoginResponse
+    AC--&gt;&gt;U: &#123; token, user &#125;
+    note over U,AC: 后续请求头携带 Authorization: Bearer token
+
+
+六、核心链路：点击即共享6.1 创建共享时序sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant V as Vue 前端
+    participant C as FolderController
+    participant S as FolderService
+    participant SR as ShareService
+    participant R as FolderRepository
+    participant F as 文件服务器
+    participant D as SQL Server
+
+    U-&gt;&gt;V: 填写表单并提交
+    V-&gt;&gt;C: POST /api/folder
+    C-&gt;&gt;S: CreateFolderAsync(request)
+    S-&gt;&gt;S: 文件夹名白名单校验
+    S-&gt;&gt;R: CheckFolderNameAsync(name)
+    R-&gt;&gt;D: 检查文件夹名存储过程
+    D--&gt;&gt;R: 是否重名
+    S-&gt;&gt;R: GetFolderServerAsync(fileServerId)
+    R-&gt;&gt;D: 查询文件服务器存储过程
+    D--&gt;&gt;R: 文件服务器记录
+    S-&gt;&gt;SR: CreateShareAsync(server, name, editor, reader)
+    SR-&gt;&gt;F: 检查目录是否存在
+    SR-&gt;&gt;F: mkdir 建目录
+    SR-&gt;&gt;F: net share 建共享
+    SR-&gt;&gt;F: icacls 设 NTFS 权限
+    F--&gt;&gt;SR: 执行结果
+    SR--&gt;&gt;S: ShareResult
+    S-&gt;&gt;R: AddFolderInfoAsync(...)
+    R-&gt;&gt;D: 插入文件夹记录存储过程
+    D--&gt;&gt;R: 新 FolderID
+    S-&gt;&gt;R: AddFolderPermissionsAsync(...) x N
+    R-&gt;&gt;D: 插入权限记录存储过程
+    S--&gt;&gt;C: CreateFolderResponse
+    C--&gt;&gt;V: &#123; code, message, data &#125;
+    V--&gt;&gt;U: 提示创建成功
+
+6.2 状态机与补偿stateDiagram-v2
+    [*] --&gt; Validate
+    Validate --&gt; CreateOnServer : 参数合法
+    Validate --&gt; [*] : 抛 BusinessException
+    CreateOnServer --&gt; WriteDb : SSH 执行成功
+    CreateOnServer --&gt; [*] : SSH 失败 / 目录已存在
+    WriteDb --&gt; Success : 写库成功
+    WriteDb --&gt; Compensate : 写库失败
+    Compensate --&gt; [*] : 补偿删除已建共享与目录
+    Success --&gt; [*]
+
+事务顺序（已确认的设计）：先 SSH 建共享 → 再写数据库 → 写库失败则补偿删除。
+6.3 修改 &#x2F; 删除 &#x2F; 续期flowchart LR
+    subgraph MOD[&quot;修改共享&quot;]
+        M1[&quot;读取 FolderInfo&quot;] --&gt; M2[&quot;icacls /reset&quot;] --&gt; M3[&quot;按新名单 grant&quot;] --&gt; M4[&quot;修改文件夹记录&quot;]
+    end
+    subgraph DEL[&quot;删除共享&quot;]
+        D1[&quot;读取 FolderInfo&quot;] --&gt; D2[&quot;net share /delete&quot;] --&gt; D3[&quot;rmdir /s /q&quot;] --&gt; D4[&quot;删除文件夹记录&quot;]
+    end
+    subgraph REN[&quot;续期&quot;]
+        R1[&quot;读取 EndTime&quot;] --&gt; R2[&quot;计算新到期时间&quot;] --&gt; R3[&quot;修改到期时间&quot;] --&gt; R4[&quot;插入续期记录&quot;]
+    end
+
+
+七、数据访问与存储7.1 Dapper 调用链flowchart LR
+    RP[&quot;具体 Repository&quot;] --&gt; BR[&quot;BaseRepository&quot;]
+    BR --&gt; CS[&quot;连接字符串&lt;br/&gt;（配置，脱敏）&quot;]
+    BR --&gt; M1[&quot;QueryProcAsync&quot;]
+    BR --&gt; M2[&quot;QuerySingleProcAsync&quot;]
+    BR --&gt; M3[&quot;ExecuteProcAsync&quot;]
+    BR --&gt; M4[&quot;ExecuteScalarProcAsync&quot;]
+    M1 --&gt; DP[&quot;Dapper&quot;]
+    M2 --&gt; DP
+    M3 --&gt; DP
+    M4 --&gt; DP
+    DP --&gt; SP[&quot;存储过程（唯一数据入口）&quot;]
+    SP --&gt; DB[(&quot;SQL Server&quot;)]
+
+7.2 存储过程清单（按业务域）
+
+
+业务域
+存储过程
+
+
+
+认证 &#x2F; 授权
+管理员登录、用户校验、获取登录信息、人员授权增删改查
+
+
+共享文件夹
+插入、查重、查询、修改、删除、修改到期时间
+
+
+文件夹权限
+插入权限、查询列表、查询全部
+
+
+文件服务器
+插入、查询、删除、获取列表、按授权码获取、获取授权码列表
+
+
+空间 &#x2F; 日志
+空间查询、操作日志、续期日志查询&#x2F;插入
+
+
+令牌
+创建、校验、更新
+
+
+7.3 数据模型（依据现有文档推断）erDiagram
+    FolderServer ||--o&#123; FolderInfo : &quot;承载&quot;
+    FolderInfo ||--o&#123; FolderPermissions : &quot;拥有&quot;
+    FolderInfo ||--o&#123; RenewalLog : &quot;续期记录&quot;
+
+    FolderServer &#123;
+        int ID PK
+        string Name
+        string Path
+        string LocalPath
+    &#125;
+    FolderInfo &#123;
+        int ID PK
+        string Name
+        string Account
+        string AccreditID
+        int FileServerID FK
+        int Validity
+        datetime DueToTime
+        string Path
+        int state
+    &#125;
+    FolderPermissions &#123;
+        int ID PK
+        int FolderID FK
+        int Type
+        string Name
+        string Account
+    &#125;
+    RenewalLog &#123;
+        int ID PK
+        int FolderID FK
+        string FolderName
+        int Days
+        string Operator
+    &#125;
+    Token &#123;
+        string Token
+        string IP
+        datetime OutTime
+    &#125;
+    OperateLog &#123;
+        int ID PK
+        string Operator
+        string Content
+        datetime OperateTime
+    &#125;
+
+
+Type：1 &#x3D; 编辑者，2 &#x3D; 只读者。
+
+
+八、文件服务器共享操作8.1 SSH 命令执行链flowchart TB
+    SS[&quot;ShareService&quot;] --&gt; CB[&quot;ShareCommandBuilder&lt;br/&gt;构建白名单命令&quot;]
+    CB --&gt; RC[&quot;SshClientFactory.RunCommand&quot;]
+    RC --&gt; CL[&quot;SshClient&lt;br/&gt;PrivateKey 认证&quot;]
+    CL --&gt; SH[&quot;文件服务器 cmd.exe&quot;]
+    SH --&gt; C1[&quot;mkdir 创建目录&quot;]
+    SH --&gt; C2[&quot;net share 创建共享&quot;]
+    SH --&gt; C3[&quot;icacls 设置 NTFS 权限&quot;]
+    SH --&gt; C4[&quot;rmdir /s /q 删除目录&quot;]
+    SH --&gt; C5[&quot;net share（查询共享列表）&quot;]
+
+8.2 命令白名单
+
+
+操作
+命令模板
+
+
+
+建目录
+mkdir &quot;&lt;LocalPath&gt;&quot;
+
+
+建共享
+net share &quot;&lt;Name&gt;&quot;=&quot;&lt;LocalPath&gt;&quot; /grant:everyone,READ
+
+
+删共享
+net share &quot;&lt;Name&gt;&quot; /delete
+
+
+删目录
+rmdir /s /q &quot;&lt;LocalPath&gt;&quot;
+
+
+设权限
+icacls &quot;&lt;LocalPath&gt;&quot; /grant &quot;&lt;Account&gt;:(OI)(CI)&lt;M 或 R&gt;&quot;
+
+
+重置权限
+icacls &quot;&lt;LocalPath&gt;&quot; /reset
+
+
+查共享
+net share
+
+
+8.3 注入防护flowchart LR
+    IN[&quot;用户输入文件夹名&quot;] --&gt; RG[&quot;白名单正则&lt;br/&gt;仅中文/字母/数字/下划线/短横线&quot;]
+    RG --&gt; LEN[&quot;长度 ≤ 50&quot;]
+    LEN --&gt; OK[&quot;进入命令构建&quot;]
+    RG -.-&gt;|不匹配| ERR[&quot;抛 BusinessException&quot;]
+
+
+九、配置架构（脱敏）flowchart TB
+    CFG[&quot;appsettings.json&quot;] --&gt; S1[&quot;ConnectionStrings:Default&lt;br/&gt;DB_HOST / DB_NAME&quot;]
+    CFG --&gt; S2[&quot;Jwt&lt;br/&gt;Issuer / Audience / JWT_SECRET / ExpireMinutes&quot;]
+    CFG --&gt; S3[&quot;Cors:AllowedOrigins&lt;br/&gt;前端来源白名单&quot;]
+    CFG --&gt; S4[&quot;FileServers:Servers[]&lt;br/&gt;Id / Name / Host / Port / User / KeyPath / ShareRootPath&quot;]
+    CFG --&gt; S5[&quot;Crypto&lt;br/&gt;LEGACY_DES_KEY / ConfigOffset / DbPasswordOffset&quot;]
+    CFG --&gt; S6[&quot;Serilog&lt;br/&gt;Console + File Sink&quot;]
+    S4 --&gt; SVC[&quot;SshClientFactory / ShareService&quot;]
+
+
+生产环境建议：敏感项（连接串、JWT 密钥、DES 密钥）改由环境变量或密钥管理服务注入，不落明文配置文件。
+
+
+十、日志架构flowchart LR
+    APP[&quot;业务代码 ILogger&quot;] --&gt; SL[&quot;Serilog&quot;]
+    SL --&gt; CON[&quot;Console Sink&quot;]
+    SL --&gt; FILE[&quot;File Sink&lt;br/&gt;logs/log-.txt 按天滚动&quot;]
+    SL --&gt; ENR[&quot;Enrich.FromLogContext&quot;]
+
+
+十一、框架版本总览
+
+
+层
+组件
+版本
+
+
+
+前端
+Vue
+3.5.6
+
+
+前端
+Vue Router
+4.4.5
+
+
+前端
+Pinia
+2.2.2
+
+
+前端
+Element Plus
+2.8.4
+
+
+前端
+Axios
+1.7.7
+
+
+前端
+Vite
+5.4.6
+
+
+后端
+.NET
+8.0 (LTS)
+
+
+后端
+ASP.NET Core
+8.0
+
+
+后端
+Dapper
+2.1.35
+
+
+后端
+Microsoft.Data.SqlClient
+5.2.1
+
+
+后端
+SSH.NET
+2026.0.0
+
+
+后端
+JwtBearer
+8.0.8
+
+
+后端
+Serilog.AspNetCore
+8.0.2
+
+
+后端
+Swashbuckle
+6.7.3
+
+
+数据库
+SQL Server
+复用现有实例
+
+
+中间件
+Nginx
+静态托管 + 反向代理
+
+
+
+十二、附录：已知不足（架构视角）
+详细逐条分析见评审记录；此处仅列架构层面需要关注的点。
+
+
+
+
+#
+位置
+问题
+影响
+
+
+
+1
+ShareService
+SSH 连接信息未从配置注入模型
+核心链路不可用
+
+
+2
+ShareService
+目录存在性判断 Contains(&quot;EXISTS&quot;) 会匹配 NOT_EXISTS
+创建必然失败
+
+
+3
+Program.cs
+未配置 JSON camelCase 命名策略
+前端读取字段全部 undefined
+
+
+4
+ShareCommandBuilder
+共享级权限 everyone,READ 会封顶 NTFS 的 M 权限
+编辑者实际无法写入
+
+
+5
+FolderService
+修改共享未同步数据库权限表
+权限记录与真实权限不一致
+
+
+6
+FolderService
+ShareStatus 状态跟踪未落库
+补偿失败后无法追踪
+
+
+7
+FolderService
+未使用 AccreditID 解析文件服务器
+授权关系未校验
+
+
+8
+Program.cs
+UseExceptionHandler 注册在 MapControllers 之后
+无法捕获控制器异常
+
+
+9
+SpaceService
+已用&#x2F;剩余&#x2F;使用率硬编码为 0
+空间管理未真正实现
+
+
+10
+仓库根目录
+文档与配置含明文生产凭据
+严重安全风险
+
+
+11
+package.json
+未声明 @element-plus/icons-vue 依赖
+构建依赖隐式提升
+
+
+
+本文档基于当前代码与配套设计文档整理；涉及存储过程真实签名、SSH 配置归属、登录口令加密方式等仍待确认的事项，以最终确认结论为准。
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>系统设计</tag>
+        <tag>文件共享</tag>
+        <tag>系统架构</tag>
+        <tag>.NET Core</tag>
+        <tag>Vue</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>「脚本仙人」系统开发总结</title>
+    <url>/2026/09/%E8%84%9A%E6%9C%AC%E4%BB%99%E4%BA%BA%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[
+项目定位：小组文件&#x2F;脚本共享系统，支持版本管理、简介搜索、排序筛选、成员共享、管理员权限。技术栈：纯 Node.js 零依赖（无任何 npm 包），SQLite 存储（node:sqlite），原生 HTML&#x2F;CSS&#x2F;JS 前端。架构：分层架构 Router → Controller → Service → Repo，职责清晰，便于扩展。
+
+
+一、系统概览核心能力
+
+
+能力
+说明
+
+
+
+用户认证
+scrypt 密码哈希、HMAC 签名 token、登录失败锁定
+
+
+文件管理
+上传&#x2F;下载&#x2F;预览&#x2F;重命名&#x2F;简介&#x2F;删除
+
+
+版本管理
+多版本、回滚、删除版本
+
+
+搜索筛选
+关键词（名称+简介）、上传者、后缀、排序
+
+
+共享协作
+公共文件、指定成员共享
+
+
+权限控制
+owner 优先，admin 拥有全部管理权
+
+
+架构分层graph LR
+    A[Router&lt;br/&gt;路由分发] --&gt; B[Controller&lt;br/&gt;请求处理]
+    B --&gt; C[Service&lt;br/&gt;业务逻辑]
+    C --&gt; D[Repo&lt;br/&gt;数据访问]
+    D --&gt; E[(SQLite)]
+
+四层分离的价值：每个新功能（简介、筛选、版本删除、共享）都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
+
+二、开发过程回顾阶段一：基础搭建
+零依赖架构：手写 multipart 解析、静态文件服务、token 签名
+SQLite 建表 + WAL 模式：保证并发读写
+
+阶段二：核心功能迭代按用户需求逐步叠加：
+graph LR
+    A[基础上传下载] --&gt; B[简介]
+    B --&gt; C[简介搜索]
+    C --&gt; D[排序]
+    D --&gt; E[上传者/后缀筛选]
+    E --&gt; F[&quot;其它筛选&quot;]
+    F --&gt; G[版本删除]
+    G --&gt; H[admin 权限]
+    H --&gt; I[成员共享]
+
+阶段三：部署与运维
+内网访问：局域网 IP + 防火墙
+上传 GitHub：版本管理
+性能与安全检测
+
+
+三、关键经验1. 分层架构的价值Router → Controller → Service → Repo 四层分离，让每个新功能都能按固定套路在四层各加一段代码，改动清晰、可测试、可回滚。这是整个项目能快速迭代的基石。
+2. 零依赖的取舍
+
+
+优点
+代价
+
+
+
+无供应链风险
+手写 multipart 解析
+
+
+部署简单（只需 Node 环境）
+手写 token 签名
+
+
+体积小
+手写静态服务
+
+
+
+需自行处理边界情况
+
+
+3. 数据库迁移策略用 PRAGMA table_info 检查列是否存在，再 ALTER TABLE 增量迁移，兼容旧数据库，避免破坏已有数据。
+-- 示例：检查列是否存在，不存在则添加PRAGMA table_info(files);-- 若缺少某列，则执行ALTER TABLE files ADD COLUMN description TEXT DEFAULT &#x27;&#x27;;
+
+4. 安全防护意识
+
+
+风险
+防护措施
+
+
+
+SQL 注入
+排序字段用白名单校验
+
+
+路径穿越
+文件名&#x2F;路径严格校验
+
+
+密码安全
+scrypt 加盐哈希
+
+
+登录爆破
+失败次数锁定
+
+
+
+四、踩过的坑与教训教训 1：前端内联传 JSON 导致属性损坏（最深刻）问题：共享按钮 onclick 内联传入 JSON.stringify(sharedWith)，当含双引号时提前终止 HTML 属性，导致按钮无法点击、无法覆盖共享。
+教训：不要在 HTML 属性内联传复杂 JSON。应只传 id，从数据源（全局缓存&#x2F;接口）读取。这是本次最典型的”看似简单实则致命”的 bug。
+&lt;!-- ❌ 错误：内联传 JSON，双引号会破坏属性 --&gt;&lt;button onclick=&quot;share(&#123;&#123; JSON.stringify(sharedWith) &#125;&#125;)&quot;&gt;共享&lt;/button&gt;&lt;!-- ✅ 正确：只传 id，从数据源读取 --&gt;&lt;button onclick=&quot;share(fileId)&quot;&gt;共享&lt;/button&gt;
+
+教训 2：API 路径前缀重复问题：api(&#39;/api/users&#39;) 因 api() 已自动加 /api 前缀，导致双重前缀 404。
+教训：封装统一请求函数时，调用方必须清楚前缀规则，避免重复拼接。
+// ❌ 错误：api() 已自动加 /api，这里又写了一遍api(&#x27;/api/users&#x27;)// ✅ 正确：只写相对路径api(&#x27;/users&#x27;)
+
+教训 3：cmd 批处理语法陷阱问题：测试登录锁定时，cmd 的 for 循环报”此时不应有 i”。
+教训：复杂逻辑用 Node 脚本而非 cmd 批处理，跨平台更可靠。
+教训 4：Git 远程冲突问题：GitHub 网页端修改 README 后，本地 push 被拒。
+教训：多人&#x2F;多端协作时，push 前先 pull --allow-unrelated-histories 合并。
+git pull origin main --allow-unrelated-historiesgit push origin main
+
+教训 5：删除操作的边界保护问题：删除最后一个版本时返回 500。
+教训：删除类操作必须考虑边界条件（至少保留一个版本），并在 service 层捕获转换为友好错误。
+// 至少保留一个版本if (versions.length &lt;= 1) &#123;  throw new Error(&#x27;至少保留一个版本，无法删除&#x27;);&#125;
+
+教训 6：测试污染生产数据问题：测试过程中 admin 账号被锁定、testmember 残留。
+教训：测试应使用独立数据或测试账号，避免污染生产数据；测试后需清理。
+
+五、总体心得
+小步快跑：每个需求独立迭代、独立测试、独立提交，问题定位快。
+前后端联动：功能改动需同时考虑前端展示与后端逻辑，尤其注意数据传递方式（内联 vs 接口）。
+权限模型要统一：owner 优先 + admin 兜底，通过 _requireOwner &#x2F; _canRead 集中管理，避免散落各处。
+边界与异常：删除、空数据、非法输入都要有兜底，避免 500。
+版本管理：Git 提交记录清晰，每个功能一个 commit，便于回溯。
+
+
+
+总结：这个系统从零到一，经历了功能叠加、bug 修复、部署上线、GitHub 托管，是一个完整且典型的全栈小项目实践。它教会我的不仅是技术，更是如何用分层架构应对快速迭代、如何用安全意识规避常见风险、如何从踩坑中沉淀方法论。
+
+
+📦 项目地址
+GitHub：Filehub-4-Group
+
+
+欢迎 Star、Fork，也欢迎提 Issue 交流讨论。
+
+]]></content>
+      <categories>
+        <category>技术笔记</category>
+      </categories>
+      <tags>
+        <tag>Node.js</tag>
+        <tag>全栈开发</tag>
+        <tag>系统设计</tag>
+        <tag>零依赖</tag>
+        <tag>SQLite</tag>
+        <tag>文件共享</tag>
       </tags>
   </entry>
   <entry>
